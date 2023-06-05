@@ -1,0 +1,15 @@
+test_3d_points.py
+to_send.py
+export_cameras.py
+extrinsics.json
+extrinsics_structured.csv
+extrinsics_structured_zhang.csv
+extrinsics_struc_model_masked.json
+homography.py
+import_cameras.py
+sift.py
+struc_model.txt
+struc_model_masked.txt
+test.py
+__pycache__/
+extrinsics_struc_model.json
