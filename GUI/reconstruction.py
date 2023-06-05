@@ -1,0 +1,960 @@
+import math
+import glob
+import numpy as np
+import cv2 as cv
+import os
+import json
+from scipy import linalg
+from scripts import helpers, reconstruction
+from GUI import show_picture
+
+import matplotlib.pyplot as plt
+
+from PyQt6.QtWidgets import (
+    QLabel, QWidget, QVBoxLayout, QHBoxLayout, QStackedLayout, QGridLayout,
+    QPushButton, QFileDialog, QSizePolicy, QMessageBox, QScrollArea, QLineEdit,
+    QComboBox
+)
+from PyQt6.QtGui import (
+    QPixmap, QResizeEvent, QMouseEvent, QImage, QPalette,
+    QPaintEvent, QPainter, QBrush, QColor, QKeyEvent, QDoubleValidator)
+from PyQt6.QtCore import Qt, QRect, pyqtSignal, QSettings, QFileInfo, QEvent
+
+
+class _AngleValues(QWidget):
+    clicked = pyqtSignal()
+    def __init__(self, parent):
+        super(QWidget, self).__init__(parent)
+        self._background_color = QColor('white')
+        self._text_Color = QColor('black')
+        self.setMinimumHeight(50)
+        self.setMinimumWidth(100)
+    
+    def paintEvent(self, a0: QPaintEvent) -> None:
+        painter = QPainter(self)
+
+        brush = QBrush()
+        brush.setColor(self._background_color)
+        brush.setStyle(Qt.BrushStyle.SolidPattern)
+        rect = QRect(0, 0, self.width(), self.height())
+        painter.fillRect(rect, brush)
+
+        values = self.parent()._angles_sphere
+
+        pen = painter.pen()
+        pen.setColor(self._text_Color)
+        painter.setPen(pen)
+
+        font = painter.font()
+        font.setFamily("Times")
+        font.setPointSize(18)
+        painter.setFont(font)
+        
+        painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, f'({values[0]},{values[1]})')
+
+    def _trigger_refresh(self):
+        self.update()
+    
+    def mousePressEvent(self, a0: QMouseEvent) -> None:
+        self.clicked.emit()
+
+class PictureButton(QLabel):
+    left_clicked = pyqtSignal(object)
+    right_clicked = pyqtSignal(object)
+    def __init__(self, parent, key : helpers.Keys, image : QImage):
+        super(QWidget, self).__init__(parent)
+        self.setPixmap(image)
+        self.key = key
+        self.setFixedWidth(30)
+        self.setFixedHeight(30)
+    
+    def mousePressEvent(self, a0: QMouseEvent) -> None:
+        if a0.button() == Qt.MouseButton.LeftButton :
+            self.left_clicked.emit(self.key)
+            return
+        if a0.button() == Qt.MouseButton.RightButton :
+            self.right_clicked.emit(self.key)
+            return       
+
+class QPointEntry(QWidget):
+    delete_point = pyqtSignal()
+    label_edit = pyqtSignal(object)
+    def __init__(self, point : helpers.Point3D):
+        super(QWidget, self).__init__()
+        layout = QHBoxLayout()
+        self.point = point
+        self.label = QLineEdit(self)
+        self.label.setText(point.label)
+        self.label.returnPressed.connect(self.label_changed)
+        layout.addWidget(self.label)
+        self.delete_button = QPushButton(text="x")
+        self.delete_button.clicked.connect(self.delete)
+        self.delete_button.setFixedWidth(20)
+        layout.addWidget(self.delete_button)
+        self.id = point.id
+        self.setLayout(layout)
+    
+    def delete(self):
+        self.delete_point.emit()
+
+    def label_changed(self):
+        self.label.clearFocus()
+        self.label_edit.emit(self.label.text())
+
+class QPoints(QScrollArea):
+    dot_added = pyqtSignal()
+    delete_dot = pyqtSignal(object)
+    label_changed = pyqtSignal(object)
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.w = QWidget()
+        self.add_pt_btn = QPushButton("Add point")
+        self.add_pt_btn.clicked.connect(self.add_dot)
+
+        self.load_points(self.window().dots)
+
+        self.setBackgroundRole(QPalette.ColorRole.Dark)
+        self.setSizePolicy(QSizePolicy.Policy.MinimumExpanding,
+            QSizePolicy.Policy.Expanding)
+        self.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.setMaximumWidth(200)
+        self.installEventFilter(self)
+    
+    def eventFilter(self, source, event):
+        if event.type() == QEvent.Type.ShortcutOverride or event.type() == QEvent.Type.KeyPress:
+            event.ignore()
+            return True
+
+        return super().eventFilter(source, event)
+
+    def load_points(self, points):
+        self.w = QWidget()
+        self.vbox = QVBoxLayout()  
+        self.buttons = []
+        sorted_points_k = sorted(points)
+        for i in sorted_points_k:
+            button = QPointEntry(points[i])
+            self.buttons.append(button)
+            button.delete_point.connect(self.delete_point)
+            button.label_edit.connect(self.change_label)
+            self.vbox.addWidget(button)
+        self.vbox.addWidget(self.add_pt_btn)
+        self.w.setLayout(self.vbox)
+        self.w.setSizePolicy(QSizePolicy.Policy.Maximum,
+            QSizePolicy.Policy.Maximum)
+        self.setWidget(self.w)
+    
+    def delete_point(self):
+        sender_button = self.sender()
+        id = sender_button.id
+        self.delete_dot.emit(id)
+
+    def add_dot(self):
+        self.dot_added.emit()
+
+    def change_label(self, text):
+        sender_button = self.sender()
+        id = sender_button.id
+        self.label_changed.emit([id, text])
+
+
+class DistanceWidget(QWidget):
+    def __init__(self, parent):
+        super(QWidget, self).__init__(parent)
+        self.full_layout = QVBoxLayout()
+        self.selection = QHBoxLayout()
+        self.left = QComboBox()
+        self.right = QComboBox()
+        self.left.addItem("",0)
+        self.right.addItem("",0)
+        
+        self.load_points(self.window().dots)
+        self.selection.addWidget(self.left)
+        self.to = QLabel("to")
+        self.to.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.selection.addWidget(self.to)
+        self.selection.addWidget(self.right)
+
+        self.distance = QHBoxLayout()
+        self.distance.addWidget(QLabel("Distance :"))
+        self.value = QLineEdit()
+        self.validator = QDoubleValidator()
+        self.validator.setBottom(0)
+        self.value.setValidator(self.validator)
+        self.distance.addWidget(self.value)
+
+        #wait init of all widgets to add the QCombobox listener
+        self.left.currentIndexChanged.connect(self.update_dist)
+        self.right.currentIndexChanged.connect(self.update_dist)
+
+        self.full_layout.addLayout(self.selection)
+        self.full_layout.addLayout(self.distance)
+
+        self.setLayout(self.full_layout)
+    
+    def load_points(self, points):
+        self.points = {}
+        left_index = self.left.currentIndex()
+        left_data = self.left.currentData()
+        right_index = self.right.currentIndex()
+        right_data = self.right.currentData()
+
+        self.left.clear()
+        self.right.clear()
+
+        self.left.addItem("",0)
+        self.right.addItem("",0)
+        for i in points:
+            point = points[i]
+            if point.get_position() is None:
+                continue
+            self.points[i] = point
+            self.left.addItem(point.get_label(),point.get_id())
+            self.right.addItem(point.get_label(),point.get_id())
+        
+        if left_index is not None and self.left.itemData(left_index) == left_data:
+            self.left.setCurrentIndex(left_index)
+        else:
+            self.left.setCurrentIndex(0)
+        if right_index is not None and self.right.itemData(right_index) == right_data:
+            self.right.setCurrentIndex(right_index)
+        else:
+            self.right.setCurrentIndex(0)
+
+    def update_dist(self):
+        if self.left.currentIndex() <= 0 or self.right.currentIndex() <= 0:
+            self.value.setText("0.0")
+            return
+        self.value.setText(str(reconstruction.get_distance(self.points[self.left.currentData()].get_position(), self.points[self.right.currentData()].get_position())))
+class CommandsWidget(QWidget):
+    dot_added = pyqtSignal()
+    delete_dot = pyqtSignal(object)
+    label_changed = pyqtSignal(object)
+
+    def __init__(self, parent):
+        super(QWidget, self).__init__(parent)
+        self.v_layout = QVBoxLayout()
+
+        # Shortcut important pictures
+        self.grid_layout = QGridLayout()
+
+        self.frontal = PictureButton(self, helpers.Keys.FRONT, QPixmap.fromImage(QImage("./icons/frontal.jpg")))
+        self.posterior = PictureButton(self, helpers.Keys.POST, QPixmap.fromImage(QImage("./icons/posterior.jpg")))
+        self.inferior = PictureButton(self, helpers.Keys.INFERIOR, QPixmap.fromImage(QImage("./icons/inferior.jpg")))
+        self.superior = PictureButton(self, helpers.Keys.SUPERIOR, QPixmap.fromImage(QImage("./icons/superior.jpg")))
+        self.left = PictureButton(self, helpers.Keys.LEFT, QPixmap.fromImage(QImage("./icons/left.jpg")))
+        self.right = PictureButton(self, helpers.Keys.RIGHT, QPixmap.fromImage(QImage("./icons/right.jpg")))
+        
+        self.frontal.left_clicked.connect(self.left_clicked)
+        self.posterior.left_clicked.connect(self.left_clicked)
+        self.inferior.left_clicked.connect(self.left_clicked)
+        self.superior.left_clicked.connect(self.left_clicked)
+        self.left.left_clicked.connect(self.left_clicked)
+        self.right.left_clicked.connect(self.left_clicked)
+
+        self.frontal.right_clicked.connect(self.right_clicked)
+        self.posterior.right_clicked.connect(self.right_clicked)
+        self.inferior.right_clicked.connect(self.right_clicked)
+        self.superior.right_clicked.connect(self.right_clicked)
+        self.left.right_clicked.connect(self.right_clicked)
+        self.right.right_clicked.connect(self.right_clicked)
+
+        self.grid_layout.addWidget(self.superior, 0, 1)
+        self.grid_layout.addWidget(self.left, 1, 0)
+        self.grid_layout.addWidget(self.frontal, 1, 1)
+        self.grid_layout.addWidget(self.right, 1, 2)
+        self.grid_layout.addWidget(self.inferior, 2, 1)
+        self.grid_layout.addWidget(self.posterior, 3, 1)
+        
+
+        self.v_layout.addLayout(self.grid_layout)
+
+        # List of Points
+        self.points = QPoints(self)
+        self.points.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.v_layout.addWidget(self.points)
+        self.v_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self.points.delete_dot.connect(self.delete_point)
+        self.points.label_changed.connect(self.change_label)
+        self.points.dot_added.connect(self.add_dot)
+
+        # Distance calculator
+
+        self.distance_calculator = DistanceWidget(self)
+        self.v_layout.addWidget(self.distance_calculator)
+
+        self.v_layout.setAlignment(Qt.AlignmentFlag.AlignRight)
+        self.setLayout(self.v_layout)
+
+
+    def left_clicked(self, key : helpers.Keys):
+        self.parent().change_picture(key)
+        
+    def right_clicked(self, key : helpers.Keys):
+        self.parent().set_picture(key)
+
+    def delete_point(self, id):
+        self.delete_dot.emit(id)
+    
+    def add_dot(self):
+        self.dot_added.emit()
+
+    def change_label(self, id_and_text):
+        self.label_changed.emit(id_and_text)
+
+    def mousePressEvent(self, a0: QMouseEvent) -> None:
+        print("Commands Pressed")
+
+class Sphere3D(QWidget):
+    def __init__(self, calibration : QFileInfo):
+        super(QWidget, self).__init__()
+        self.activated = False
+        self.last_pos = None
+        self._angles_sphere = (0,0) #(180,90)
+        self._old_angles = (0,0)
+
+        # Point3D.id -> Point3D
+        self.dots = dict()
+        self.dots[0] = helpers.Point3D(0, 'Front')#, position=(0.010782485813073936, 0.00032211282041287505, 0.03141674225785502, 1.0)) , position=(0.0,0.0,0.0,1.0)
+        self.dots[1] = helpers.Point3D(1, 'Middle')#, position=(0.00503536251302613, 0.0007932051327948597, 0.03249463969616948, 1.0))
+        self.dots[2] = helpers.Point3D(2, 'Back')#, position=(-0.012919467433220783, 0.0035218895786182747, 0.024576051668865468, 1.0))
+
+        self.counter = 0
+
+        # inverse
+        self.move_from_arrow = {
+            Qt.Key.Key_Up : (0,-1),
+            Qt.Key.Key_Down : (0,1),
+            Qt.Key.Key_Left : (-1,0),
+            Qt.Key.Key_Right : (1,0),
+        }
+        self.v_layout = QVBoxLayout()
+        self.h_layout = QHBoxLayout()
+        self.sphere = QLabel()
+        self.sphere.setBackgroundRole(QPalette.ColorRole.Dark)
+        self.directory = ""
+        self.calibration_dict = {}
+        self.images = {}
+        self.calibration_file = ""
+        self.thumbnails = ""
+        self.current_image = None
+
+        if calibration is not None:
+            self.load(calibration)
+        
+        self.sphere.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self.sphere.setContentsMargins(0,0,0,0)
+        self.sphere.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self._sphere_values = _AngleValues(self)
+        self._sphere_values.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
+
+        self._sphere_values.clicked.connect(self.values_clicked)
+
+        self.v_layout.addWidget(self.sphere)
+        self.v_layout.addWidget(self._sphere_values)
+
+        
+        self.commands_widget = CommandsWidget(self)
+        self.commands_widget.delete_dot.connect(self.delete_dot)
+        self.commands_widget.label_changed.connect(self.change_label)
+        self.commands_widget.dot_added.connect(self.add_dot)
+
+        self.commands_widget.setSizePolicy(QSizePolicy.Policy.Maximum,QSizePolicy.Policy.Minimum)
+        self.commands_widget.setContentsMargins(0,0,0,0)
+        self.h_layout.setSpacing(0)
+        self.h_layout.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+
+        
+        self.h_layout.addLayout(self.v_layout)
+        self.h_layout.addWidget(self.commands_widget)
+
+
+        self.setLayout(self.h_layout)
+
+        self.setContentsMargins(0,0,0,0)
+    
+    def load(self, calibration):
+        self.directory = calibration.absolutePath()
+        self.calibration_file = calibration.fileName()
+        self.current_image = None
+        images_thumbnails = None
+        with open(f'{self.directory}/{self.calibration_file}', "r") as f:
+            self.calibration_dict = json.load(f)
+            self.thumbnails = self.calibration_dict["thumbnails"]
+            images_thumbnails = glob.glob(f'{self.directory}/{self.thumbnails}/*')
+            if("commands" not in self.calibration_dict):
+                self.calibration_dict["commands"] = {
+                    #Front is used as complete calibration for the angles
+                    helpers.Keys.FRONT.name: (0,0),
+                    helpers.Keys.POST.name: (-180, 0),
+                    helpers.Keys.LEFT.name: (90, 0),
+                    helpers.Keys.RIGHT.name: (-90, 0),
+                    helpers.Keys.INFERIOR.name: (0, -90),
+                    helpers.Keys.SUPERIOR.name: (0, 90)
+                    }
+                with open(self.calibration_file, "w") as f_to_write:
+                    json.dump(self.calibration_dict, f_to_write)
+            self.commands = self.calibration_dict["commands"]
+        image_calibration = {}
+        self.center = np.matrix([0,0,0]).T
+        intrinsics = np.matrix(self.calibration_dict["intrinsics"]["camera matrix"]["matrix"])
+        distCoeffs = np.matrix(self.calibration_dict["intrinsics"]["distortion matrix"]["matrix"])
+
+        self.w = int(self.calibration_dict["intrinsics"]["width"])
+        self.h = int(self.calibration_dict["intrinsics"]["height"])
+        self.thumb_w = int(self.calibration_dict["thumbnails_width"])
+        self.thumb_h = int(self.calibration_dict["thumbnails_height"])
+        factor = self.thumb_w /  self.w
+        second_factor = self.thumb_h /  self.h
+
+        factor_mat = np.matrix([[factor, 0, 0],[0, second_factor, 0],[0,0,1]])
+        self.intrinsics_thumbnails = factor_mat @ np.matrix(self.calibration_dict["intrinsics"]["camera matrix"]["matrix"])
+
+        cx, cy = intrinsics.item(0,2), intrinsics.item(1,2)
+        image_sorted = sorted(images_thumbnails)
+        point = helpers.Point3D(-1, "center")
+        print(len(image_sorted))
+        for path in image_sorted:
+            file_name = os.path.basename(path)
+            if file_name not in self.calibration_dict["extrinsics"]:
+                #this checks if it's an image and if it's calibrated
+                continue
+            mat = np.matrix(self.calibration_dict["extrinsics"][file_name]["matrix"])
+            rotation = mat[0:3, 0:3]
+            trans = mat[0:3, 3]
+            C = helpers.get_camera_world_coordinates(rotation, trans)
+            point.add_dot(file_name, helpers.Point(cx, cy))
+
+            image_calibration[file_name] = C
+
+            self.center = self.center + C
+        point.set_position(self.estimate_position(point))
+        print(point)
+        self.center = np.matrix(point.get_position()[:3]).T
+
+        print(f"Center = {self.center}")
+
+        keys = sorted(image_calibration.keys())
+
+        mean_error = 0
+        nbr_img = 0
+        self.lowest_lat = -90#float('inf')
+        self.highest_lat = 90#-float('inf')
+        for file_name in keys:
+            # compute error
+            
+            pos = np.matrix([list(point.position)])
+            img_point_1 = np.matrix([point.get_image_dots(file_name).to_array()])
+
+            extrinsics = np.matrix(self.calibration_dict["extrinsics"][file_name]["matrix"])[0:3, 0:4]
+                    
+            imgpoints2 = reconstruction.project_points(pos, intrinsics, extrinsics, distCoeffs).reshape((1,2))
+            error = cv.norm(img_point_1, imgpoints2, cv.NORM_L2)/len(imgpoints2)
+            mean_error += error
+            nbr_img += 1
+
+            # add long, lat to key
+            C = image_calibration[file_name]
+            vec = C - self.center
+            print(f'{file_name} : {reconstruction.get_distance(C, self.center)}')
+            longitude, latitude = helpers.get_long_lat(vec)
+            key = (longitude, latitude) 
+            lat_deg = int(helpers.rad2degrees(latitude))+1
+            if lat_deg < self.lowest_lat :
+                self.lowest_lat = lat_deg
+            if lat_deg > self.highest_lat :
+                self.highest_lat = lat_deg
+            self.images[key] = file_name
+
+            rotation = extrinsics[0:3,0:3]
+            print(f"{file_name} : {helpers.get_euler_angles(rotation)}")
+        if nbr_img != 0:
+            print(f"total error: {mean_error/nbr_img}")
+        
+        print(f"Number images = {nbr_img}")
+
+        self.current_image = self.next_image()
+    
+    def plot_camera(self):
+        plt.close()
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+
+        print(self.current_image)
+        intrinsics = np.matrix(self.calibration_dict["intrinsics"]["camera matrix"]["matrix"])
+        extrinsics = np.matrix(self.calibration_dict["extrinsics"][self.current_image]["matrix"])[0:3, 0:4]
+
+        rotation = extrinsics[0:3, 0:3]
+
+        trans = extrinsics[0:3, 3]
+        C = helpers.get_camera_world_coordinates(rotation, trans)
+
+        #vec = C - self.center
+        dist = reconstruction.get_distance(self.center, C)
+
+        long, lat = self._angles_sphere
+        long, lat = helpers.degrees2rad(long), helpers.degrees2rad(lat)
+
+        direction_vector = np.around(helpers.get_unit_vector_from_long_lat(0, 0), decimals=10)
+        dist_vec = direction_vector * dist 
+        C_basic = np.transpose(dist_vec) + self.center
+
+        rotation_basic = reconstruction.rotate_z_axis(math.radians(-90)) @ reconstruction.rotate_y_axis(math.radians(90))     
+
+        direction_vector = np.around(helpers.get_unit_vector_from_long_lat(long, lat), decimals=10)
+        dist_vec = direction_vector * dist 
+        C_new = np.transpose(dist_vec) + self.center
+
+        rotation_new = reconstruction.rotate_x_axis(lat) @ reconstruction.rotate_y_axis(long) @ reconstruction.rotate_z_axis(math.radians(-90)) @ reconstruction.rotate_y_axis(math.radians(90)) 
+
+        pix_src_1 = np.matrix([float(0),float(0),1]).T
+        pix_src_2 = np.matrix([float(0),float(self.h),1]).T
+        pix_src_3 = np.matrix([float(self.w),float(0),1]).T
+        pix_src_4 = np.matrix([float(self.w),float(self.h),1]).T
+
+        ray_1 = reconstruction.get_ray_direction(pix_src_1, intrinsics, extrinsics)
+        ray_2 = reconstruction.get_ray_direction(pix_src_2, intrinsics, extrinsics)
+        ray_3 = reconstruction.get_ray_direction(pix_src_3, intrinsics, extrinsics)
+        ray_4 = reconstruction.get_ray_direction(pix_src_4, intrinsics, extrinsics)
+
+        # compute normal
+        cx, cy = intrinsics.item(0,2), intrinsics.item(1,2)
+        ray = reconstruction.get_ray_direction(np.matrix([cx,cy,1]).T, intrinsics, extrinsics)
+        ray = (rotation[2]).T
+        int_1 = reconstruction.intersectPlane((np.array(ray)).squeeze(), np.array(self.center).squeeze(), np.array(C).squeeze(), np.array(ray_1).squeeze())
+        int_2 = reconstruction.intersectPlane((np.array(ray)).squeeze(), np.array(self.center).squeeze(), np.array(C).squeeze(), np.array(ray_2).squeeze())
+        int_3 = reconstruction.intersectPlane((np.array(ray)).squeeze(), np.array(self.center).squeeze(), np.array(C).squeeze(), np.array(ray_3).squeeze())
+        int_4 = reconstruction.intersectPlane((np.array(ray)).squeeze(), np.array(self.center).squeeze(), np.array(C).squeeze(), np.array(ray_4).squeeze())
+
+        print(int_1)
+        print(int_2)
+        print(int_3)
+        print(int_4)
+        X = np.matrix([int_1.item(0),int_2.item(0),int_3.item(0),int_4.item(0)])
+        Y = np.matrix([int_1.item(1),int_2.item(1),int_3.item(1),int_4.item(1)])
+        Z = np.matrix([int_1.item(2),int_2.item(2),int_3.item(2),int_4.item(2)])
+        center_x, center_y, center_z = self.center.item(0),self.center.item(1),self.center.item(2)
+        ax.scatter([center_x],[center_y], [center_z], color="black", label="center")
+
+        #ax.scatter(X,Y,Z, color="red", label="plane")
+        #ax.scatter([C.item(0)],[C.item(1)],[C.item(2)], color="orange", label="src")
+        ax.scatter([C_new.item(0)],[C_new.item(1)],[C_new.item(2)], color="purple", label="virtual camera")
+
+        '''ray_x = (rotation[0]).T
+        ax.quiver(C.item(0),C.item(1),C.item(2), ray_x.item(0), ray_x.item(1), ray_x.item(2), length=0.1, color="red")
+        ray_y = (rotation[1]).T
+        ax.quiver(C.item(0),C.item(1),C.item(2), ray_y.item(0), ray_y.item(1), ray_y.item(2), length=0.1, color="blue")
+        ray_z = (rotation[2]).T
+        ax.quiver(C.item(0),C.item(1),C.item(2), ray_z.item(0), ray_z.item(1), ray_z.item(2), length=0.1, color="green")'''
+
+        ray_x = np.matrix([1,0,0]).T
+        ax.quiver(center_x,center_y,center_z, ray_x.item(0), ray_x.item(1), ray_x.item(2), length=0.1, color="red")
+        ray_y = np.matrix([0,1,0]).T
+        ax.quiver(center_x,center_y,center_z, ray_y.item(0), ray_y.item(1), ray_y.item(2), length=0.1, color="blue")
+        ray_z = np.matrix([0,0,1]).T
+        ax.quiver(center_x,center_y,center_z, ray_z.item(0), ray_z.item(1), ray_z.item(2), length=0.1, color="green")
+
+        ray_x = (rotation_basic[0]).T
+        ax.quiver(C_basic.item(0),C_basic.item(1),C_basic.item(2), ray_x.item(0), ray_x.item(1), ray_x.item(2), length=0.1, color="red")
+        ray_y = (rotation_basic[1]).T
+        ax.quiver(C_basic.item(0),C_basic.item(1),C_basic.item(2), ray_y.item(0), ray_y.item(1), ray_y.item(2), length=0.1, color="blue")
+        ray_z = (rotation_basic[2]).T
+        ax.quiver(C_basic.item(0),C_basic.item(1),C_basic.item(2), ray_z.item(0), ray_z.item(1), ray_z.item(2), length=0.1, color="green")
+
+        ray_x = (rotation_new[0]).T
+        ax.quiver(C_new.item(0),C_new.item(1),C_new.item(2), ray_x.item(0), ray_x.item(1), ray_x.item(2), length=0.1, color="black")
+        ray_y = (rotation_new[1]).T
+        ax.quiver(C_new.item(0),C_new.item(1),C_new.item(2), ray_y.item(0), ray_y.item(1), ray_y.item(2), length=0.1, color="blue")
+        ray_z = (rotation_new[2]).T
+        ax.quiver(C_new.item(0),C_new.item(1),C_new.item(2), ray_z.item(0), ray_z.item(1), ray_z.item(2), length=0.1, color="green")
+        
+        ax.plot([], [], [], color="r", label="x axis")
+        ax.plot([], [], [], color="g", label="y axis")
+        ax.plot([], [], [], color="b", label="z axis")
+
+        ax.set_xlim([-0.3, 0.3])
+        ax.set_ylim([-0.3, 0.3])
+        ax.set_zlim([-0.3, 0.3])
+        ax.legend(loc="upper right")
+        plt.show()
+
+    def delete_dot(self, id):
+        self.dots.pop(id)
+        self.commands_widget.points.load_points(self.dots)
+        self.commands_widget.distance_calculator.load_points(self.dots)
+    
+    def change_label(self, id_and_text):
+        id, text = id_and_text[0], id_and_text[1]
+        self.dots[id].set_label(text)
+    
+    def add_dot(self):
+        max_id = max(self.dots)+1
+        self.dots[max_id] = helpers.Point3D(max_id, f'Point_{max_id}')
+        self.commands_widget.points.load_points(self.dots)
+
+    def get_nearest_image(self, pos):
+        best_angle = float('inf')
+        best_pos = None
+        rad_pos = (helpers.degrees2rad(pos[0]), helpers.degrees2rad(pos[1]))
+        for img_pos in self.images.keys():
+            sinus = math.sin(img_pos[1]) * math.sin(rad_pos[1])
+            cosinus = math.cos(img_pos[1]) * math.cos(rad_pos[1])* math.cos(abs(img_pos[0]-rad_pos[0]))
+            cent_angle = math.acos(sinus + cosinus)
+            if cent_angle < best_angle:
+                best_angle = cent_angle
+                best_pos = img_pos
+        return self.images[best_pos]
+    
+    def next_image(self):
+        
+        self.current_image = self.get_nearest_image(self._angles_sphere)
+        extrinsics = np.matrix(self.calibration_dict["extrinsics"][self.current_image]["matrix"])[0:3, 0:4]
+        extrinsics_dst = self.virtual_camera_extrinsics(extrinsics)
+        homography_image = self.homography(extrinsics, extrinsics_dst)
+
+        img = cv.imread(f"{self.directory}/{self.thumbnails}/{self.current_image}", cv.IMREAD_UNCHANGED)
+
+        
+        new_image = cv.warpPerspective(img, homography_image, (self.thumb_w, self.thumb_h))
+        new_image = cv.cvtColor(new_image, cv.COLOR_BGRA2RGBA)
+        
+        height, width, channel = new_image.shape
+        bytesPerLine = 4 * width
+        qImg = QImage(new_image.data, width, height, bytesPerLine, QImage.Format.Format_RGBA8888)
+
+        pixmap = QPixmap(f'{self.directory}/{self.thumbnails}/{self.current_image}')
+        pixmap = QPixmap.fromImage(qImg)
+
+        pixmap = pixmap.scaled(self.sphere.height(), self.sphere.width(), Qt.AspectRatioMode.KeepAspectRatio)
+        self.sphere.setPixmap(pixmap)
+
+    def virtual_camera_extrinsics(self, extrinsics):
+        rotation = extrinsics[0:3, 0:3]
+        trans = extrinsics[0:3, 3]
+        C = helpers.get_camera_world_coordinates(rotation, trans)
+
+        dist = reconstruction.get_distance(self.center, C)
+
+        long, lat = self._angles_sphere
+        long, lat = helpers.degrees2rad(long), helpers.degrees2rad(lat)
+        long_img, lat_img = helpers.get_long_lat(C-self.center)
+        
+        delta_long = long - long_img
+        delta_lat = lat - lat_img
+
+        direction_vector = helpers.get_unit_vector_from_long_lat(long, lat)
+        dist_vec = direction_vector * dist 
+        C_new = np.transpose(dist_vec) + self.center
+
+        z = direction_vector / np.linalg.norm(direction_vector)
+        x,y,z = direction_vector.item(0),direction_vector.item(1),direction_vector.item(2)
+        omega = math.asin(-y)
+        phi = math.atan2(math.sqrt(x*x + y*y),z)
+
+        rotation_new = reconstruction.rotate_x_axis(lat) @ reconstruction.rotate_y_axis(long) @ reconstruction.rotate_z_axis(math.radians(-90)) @ reconstruction.rotate_y_axis(math.radians(90)) 
+        
+        trans_new = helpers.get_trans_vector(rotation_new, C_new).T
+
+        return np.hstack((rotation_new, trans_new))
+
+
+    def homography(self, ext_src, ext_dst):
+        rotation = ext_src[0:3, 0:3]
+        trans = ext_src[0:3, 3]
+        C = helpers.get_camera_world_coordinates(rotation, trans)
+
+        middle_x = int(self.thumb_w/2)
+        middle_y = int(self.thumb_h/2)
+
+        pix_src_1 = np.matrix([float(middle_x-50),float(middle_y-50),1]).T
+        pix_src_2 = np.matrix([float(middle_x-50),float(middle_y+50),1]).T
+        pix_src_3 = np.matrix([float(middle_x+50),float(middle_y-50),1]).T
+        pix_src_4 = np.matrix([float(middle_x+50),float(middle_y+50),1]).T
+
+        ray_1 = reconstruction.get_ray_direction(pix_src_1, self.intrinsics_thumbnails, ext_src)
+        ray_2 = reconstruction.get_ray_direction(pix_src_2, self.intrinsics_thumbnails, ext_src)
+        ray_3 = reconstruction.get_ray_direction(pix_src_3, self.intrinsics_thumbnails, ext_src)
+        ray_4 = reconstruction.get_ray_direction(pix_src_4, self.intrinsics_thumbnails, ext_src)
+
+        # compute normal
+        cx, cy = self.intrinsics_thumbnails.item(0,2), self.intrinsics_thumbnails.item(1,2)
+        ray = reconstruction.get_ray_direction(np.matrix([cx,cy,1]).T, self.intrinsics_thumbnails, ext_src)
+        ray = (rotation[2]).T
+        int_1 = reconstruction.intersectPlane((np.array(ray)).squeeze(), np.array([0,0,0]), np.array(C).squeeze(), np.array(ray_1).squeeze())
+        int_2 = reconstruction.intersectPlane((np.array(ray)).squeeze(), np.array([0,0,0]), np.array(C).squeeze(), np.array(ray_2).squeeze())
+        int_3 = reconstruction.intersectPlane((np.array(ray)).squeeze(), np.array([0,0,0]), np.array(C).squeeze(), np.array(ray_3).squeeze())
+        int_4 = reconstruction.intersectPlane((np.array(ray)).squeeze(), np.array([0,0,0]), np.array(C).squeeze(), np.array(ray_4).squeeze())
+
+        pix_dst_1 = reconstruction.project_points(np.matrix(int_1), self.intrinsics_thumbnails, ext_dst)
+        pix_dst_2 = reconstruction.project_points(np.matrix(int_2), self.intrinsics_thumbnails, ext_dst)
+        pix_dst_3 = reconstruction.project_points(np.matrix(int_3), self.intrinsics_thumbnails, ext_dst)
+        pix_dst_4 = reconstruction.project_points(np.matrix(int_4), self.intrinsics_thumbnails, ext_dst)
+
+        return reconstruction.find_homography_inhomogeneous(np.array([pix_src_1[:2], pix_src_2[:2], pix_src_3[:2], pix_src_4[:2]]), np.array([pix_dst_1[:2], pix_dst_2[:2], pix_dst_3[:2], pix_dst_4[:2]]))
+
+
+    # to refactor in utils
+    def get_next_angle(self, old_angle, move, min, max):
+        difference = max - min
+        return ((difference + old_angle-min - move) % difference) + min
+
+    def get_new_angle(self, new_pos):
+        #horizontal -180 -> 179, vertical -90 -> 90
+        x = self.get_next_angle(self._old_angles[0], int((new_pos.x() - self.last_pos.x())/2), -180, 180)
+        # ((360 + self._old_angles[0]+180 + int((self.last_pos.x()-new_pos.x())/2)) % 360) - 180 # +180 to go back to 0-359 and -180 at the end
+        y = max(self.lowest_lat, min(self._old_angles[1] + int((new_pos.y() - self.last_pos.y())/2), self.highest_lat))
+        
+        return (x,y)
+        
+    def move_arrow(self, key: helpers.Arrows):
+        move = self.move_from_arrow[key.value]
+        x = self.get_next_angle(self._old_angles[0], move[0], -180, 180)
+        y = max(self.lowest_lat, min((self._old_angles[1] + move[1]), self.highest_lat))
+        self._angles_sphere = (x, y)
+        self._sphere_values._trigger_refresh()
+        self.next_image()
+        self._old_angles = (self._angles_sphere[0], self._angles_sphere[1])
+
+    def set_picture(self, key: helpers.Keys):
+        self.commands[key.name] = self._angles_sphere
+        self.calibration_dict["commands"][key.name] = self._angles_sphere
+        with open(f"{self.directory}/{self.calibration_file}", "w") as f_to_write:
+            json.dump(self.calibration_dict, f_to_write)
+
+    def change_picture(self, key: helpers.Keys):
+        self._angles_sphere = self.commands[key.name]
+        self._sphere_values._trigger_refresh()
+        self.next_image()
+        self._old_angles = (self._angles_sphere[0], self._angles_sphere[1])
+
+    def mouseMoveEvent(self, ev: QMouseEvent) -> None:
+        new_pos = ev.pos()
+        if self.activated:
+            self._angles_sphere = self.get_new_angle(new_pos)
+            self._sphere_values._trigger_refresh()
+            self.next_image()
+    
+    def mousePressEvent(self, ev: QMouseEvent) -> None:
+        if ev.button() == Qt.MouseButton.RightButton :
+            self.plot_camera()
+            return
+        self.activated = True
+        self.last_pos = ev.pos()
+        self._old_angles = (self._angles_sphere[0], self._angles_sphere[1])
+
+    def mouseReleaseEvent(self, ev: QMouseEvent) -> None:
+        self.activated = False
+        self.last_pos = None
+        self._old_angles = (self._angles_sphere[0], self._angles_sphere[1])
+    
+    def resizeEvent(self, a0: QResizeEvent) -> None:
+        try:
+            self.current_image = self.get_nearest_image(self._angles_sphere)
+            pixmap = self.sphere.pixmap()
+            pixmap = pixmap.scaled(self.sphere.height(), self.sphere.width(), Qt.AspectRatioMode.KeepAspectRatio)
+            self.sphere.setPixmap(pixmap)
+        except:
+            pass
+
+
+    def values_clicked(self) -> None:
+        intrinsics = np.matrix(self.calibration_dict["intrinsics"]["camera matrix"]["matrix"])
+        distCoeffs = np.matrix(self.calibration_dict["intrinsics"]["distortion matrix"]["matrix"])
+        image1_ext = np.matrix(self.calibration_dict["extrinsics"][self.current_image]["matrix"])
+        image1_ext = image1_ext[0:3, 0:4]
+
+        dots = dict()
+
+        '''for dot in self.dots:
+            if self.dots[dot] is not None and self.dots[dot].position != None:
+                point = np.matrix([list(self.dots[dot].position)])
+                pos = reconstruction.project_points(point, intrinsics, image1_ext, distCoeffs)
+                print(f"{self.dots[dot].get_label()} : {pos}")
+                dots[dot] = {"label":self.dots[dot].get_label(),
+                            "dot": helpers.Point(pos[0], pos[1])}'''
+           
+        for dot in self.dots:
+            if self.dots[dot].get_image_dots(self.current_image) != None or dot not in dots:
+                dots[dot] = {"label":self.dots[dot].get_label(),
+                            "dot": self.dots[dot].get_image_dots(self.current_image)}
+        self.win = show_picture.QImageViewer(f'{self.directory}/{self.current_image}', dots)
+        self.win.show()
+        self.win.closeSignal.connect(self.get_dots)
+    
+    def get_dots(self, dots):
+        all_pos = True
+        nbr_img = 0
+        mean_error = 0
+        intrinsics = np.matrix(self.calibration_dict["intrinsics"]["camera matrix"]["matrix"])
+        distCoeffs = np.matrix(self.calibration_dict["intrinsics"]["distortion matrix"]["matrix"])
+
+        for dot in dots:
+            self.dots[dot].add_dot(self.current_image, dots[dot]["dot"])
+            pos = self.estimate_position(self.dots[dot])
+            if pos is not None:
+                self.dots[dot].set_position(pos)
+            all_pos = all_pos and (self.dots[dot].get_position() != None)
+            print(f"{self.dots[dot].label} : {self.dots[dot].get_position()}")
+            if self.dots[dot].get_position() is not None:
+                dot_images = self.dots[dot].get_dots()
+                for image in dot_images:
+                    if dot_images[image] is None:
+                        continue
+                    point = np.matrix([list(self.dots[dot].position)])
+                    img_point_1 = np.matrix([dot_images[image].to_array()])
+
+                    extrinsics = np.matrix(self.calibration_dict["extrinsics"][image]["matrix"])
+                    extrinsics = extrinsics[0:3, 0:4]
+                    
+                    imgpoints2 = reconstruction.project_points(point, intrinsics, extrinsics, distCoeffs).reshape((1,2))
+                    error = cv.norm(img_point_1, imgpoints2, cv.NORM_L2)/len(imgpoints2)
+                    mean_error += error
+                    nbr_img += 1
+        if nbr_img != 0:
+            print(f"total error: {mean_error/nbr_img}")
+        
+        self.commands_widget.distance_calculator.load_points(self.dots)
+
+        
+    
+    def estimate_position(self, point: helpers.Point3D):
+        dots_no_None = {k:v for (k,v) in point.dots.items() if v is not None}
+
+        if len(dots_no_None) <2 :
+            return None
+        intrinsics = np.matrix(self.calibration_dict["intrinsics"]["camera matrix"]["matrix"])
+        dist_coeffs = np.matrix(self.calibration_dict["intrinsics"]["distortion matrix"]["matrix"])
+        dots = list(dots_no_None.items())
+        w = int(self.calibration_dict["intrinsics"]["width"])
+        h = int(self.calibration_dict["intrinsics"]["height"])
+        
+        proj_points = []
+        for dot in dots:
+            image_ext = np.matrix(self.calibration_dict["extrinsics"][dot[0]]["matrix"])
+            image_ext = image_ext[0:3, 0:4]
+            proj_mat = np.matmul(intrinsics, image_ext)
+            img_point = np.matrix([dot[1].to_array()]).T
+            img_point_undistort = reconstruction.undistort_iter(np.array([img_point]).reshape((1,1,2)), intrinsics, dist_coeffs)
+            proj_point = helpers.ProjPoint(proj_mat, img_point_undistort)
+            proj_points.append(proj_point)
+
+        points3D = reconstruction.triangulate_point(proj_points)
+        return tuple(points3D)
+
+class InitWidget(QWidget):
+
+    def __init__(self, parent):
+        super(InitWidget, self).__init__(parent)
+
+        self.layout = QVBoxLayout()
+        self.question  = QLabel("Import or create project")
+        self.question.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        self.layout.addWidget(self.question)
+
+        # choices 
+        self.choices = QHBoxLayout()
+        self.cam_calib = QPushButton(text="Import",parent=self)
+        self.cam_calib.setFixedSize(500, 300)
+        self.cam_calib.clicked.connect(self.import_clicked)
+
+
+        rec = QPushButton(text="Create new project",parent=self)
+        rec.setFixedSize(500, 300)
+        rec.clicked.connect(self.create_project)
+
+        self.choices.addWidget(self.cam_calib)
+        self.choices.addWidget(rec)
+
+        self.layout.addLayout(self.choices)
+        self.setLayout(self.layout)
+    
+    def import_clicked(self):
+        dir_ = QFileInfo(QFileDialog.getOpenFileName(self, "Open Calibration File", ".", "JSON (*.json)")[0])
+        self.parent().load_dir(dir_)
+        self.parent().layout.setCurrentIndex(1)
+    
+    def create_project(self):
+        dlg = QMessageBox(self)
+        dlg.setWindowTitle("Create New Project")
+        dlg.setText("Not Implemented")
+        dlg.setStandardButtons(QMessageBox.StandardButton.Ok)
+        dlg.setIcon(QMessageBox.Icon.Information)
+
+        dlg.exec()
+
+
+class ReconstructionWidget(QWidget):
+
+    def __init__(self, parent):
+        super(ReconstructionWidget, self).__init__(parent)
+
+        self.init_settings()
+        self.reconstruction_settings.setValue("directory", None)
+        try:
+            file_settings = self.reconstruction_settings.value("directory")
+            self.dir_images = QFileInfo(file_settings) if file_settings is not None and QFileInfo(file_settings).exists() else None
+        except:
+            self.reconstruction_settings.setValue("directory", None)
+            self.dir_images = None
+
+        self.parent = parent
+        self.setWindowTitle("3D reconstruction")
+
+        # import or create json file
+        self.init = InitWidget(self)
+        # viewer
+        self.viewer = Sphere3D(self.dir_images)
+        self.viewer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+
+        self.layout = QStackedLayout()
+        self.layout.addWidget(self.init)
+        self.layout.addWidget(self.viewer)
+        self.layout.setContentsMargins(0,0,0,0)
+
+        self.setLayout(self.layout)
+        
+        if self.dir_images is None:
+            self.layout.setCurrentIndex(0)
+        else:
+            # Display Sphere
+            self.layout.setCurrentIndex(1)
+    
+    def init_settings(self):
+        self.reconstruction_settings = QSettings("Sphaeroptica", "reconstruction")
+    
+    def load_dir(self, dir):
+        self.viewer.load(dir)
+        self.reconstruction_settings.setValue("directory", dir.absoluteFilePath())
+    
+    def keyPressEvent(self, keys_pressed: QKeyEvent) -> None:
+        modifiers = keys_pressed.modifiers()
+        if modifiers & Qt.KeyboardModifier.ControlModifier:
+            self.set_picture(keys_pressed.key())
+        else:
+            # depending on the key pressed, it will throw an exception and ignore it
+            self.change_picture(keys_pressed.key())
+            self.move_sphere(keys_pressed.key())
+    
+    def move_sphere(self, key):
+        try:
+            key = helpers.Arrows(key)
+            self.viewer.move_arrow(key)
+        except Exception as e:
+            pass
+    
+    def change_picture(self, key):
+        try:
+            key = helpers.Keys(key)
+            self.viewer.change_picture(key)
+        except Exception as e:
+            pass
+    
+    def set_picture(self, key):
+        try:
+            key = helpers.Keys(key)
+            self.viewer.set_picture(key)
+        except Exception as e:
+            pass
