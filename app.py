@@ -1,3 +1,7 @@
+'''
+Copyright Yann Pollet 2023
+'''
+
 from logging.handlers import QueueHandler
 
 import sys

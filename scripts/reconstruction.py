@@ -1,7 +1,10 @@
+'''
+Copyright Yann Pollet 2023
+'''
+
 import numpy as np
 import math
 import cv2 as cv
-from scipy import linalg
 
 #import helpers
 from scripts import helpers
@@ -39,7 +42,7 @@ def old_triangulate_point(img_point1, img_point2, projMat1, projMat2):
     view_2 = np.concatenate([img_point2[1]*projMat2[2, :]-projMat2[1, :],
                              projMat2[0, :] - img_point2[0]*projMat2[2, :]])
     A = np.concatenate([view_1, view_2])
-    U, s, Vh = linalg.svd(A, full_matrices = False)
+    U, s, Vh = np.linalg.svd(A, full_matrices = False)
 
     X = Vh[-1,:]
     return scale_homogeonous_point(X)
@@ -54,7 +57,7 @@ def triangulate_point(proj_points):
                              proj_mat[0, :] - img_point[0]*proj_mat[2, :]])
         A = np.concatenate([A, view]) if A is not None else view
         
-    U, s, Vh = linalg.svd(A, full_matrices = False)
+    U, s, Vh = np.linalg.svd(A, full_matrices = False)
     X = Vh[-1,:]
     return X / X[3]
 
@@ -140,11 +143,11 @@ def get_ray_direction(img_point, intrinsics, extrinsics):
     rotation = extrinsics[0:3, 0:3]
     trans = extrinsics[0:3, 3]
     P = intrinsics@extrinsics
-    P_inv = P.T @ linalg.inv(P @ P.T)
+    P_inv = P.T @ np.linalg.inv(P @ P.T)
     #img_point[0], img_point[1] = normalize_pixel(img_point[:2], intrinsics) 
     C = helpers.get_camera_world_coordinates(rotation, trans)
     direction_ray = scale_homogeonous_point(P_inv @ img_point)[:-1] - C
-    direction_ray_norm = direction_ray / linalg.norm(direction_ray)
+    direction_ray_norm = direction_ray / np.linalg.norm(direction_ray)
 
     return direction_ray_norm
 
@@ -161,7 +164,7 @@ def find_homography_svd(src_points, dst_points):
     
     print(A.shape)
         
-    U, s, Vh = linalg.svd(A, full_matrices = False)
+    U, s, Vh = np.linalg.svd(A, full_matrices = False)
     X = Vh[-1,:].reshape((3,3))
     factor = np.linalg.norm(X)
     return X / factor
@@ -186,7 +189,7 @@ def find_homography_inhomogeneous(src_points, dst_points):
         A = np.concatenate([A, view]) if A is not None else view
         b = np.concatenate([b, sol]) if b is not None else sol
     
-    U, s, Vh = linalg.svd(A, full_matrices = False)
+    U, s, Vh = np.linalg.svd(A, full_matrices = False)
     b_prime = np.transpose(U)@b
     
     y = (b_prime.T/s).T

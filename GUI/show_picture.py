@@ -1,3 +1,6 @@
+'''
+Copyright Yann Pollet 2023
+'''
 
 import sys
 

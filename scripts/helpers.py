@@ -1,3 +1,7 @@
+'''
+Copyright Yann Pollet 2023
+'''
+
 from enum import Enum
 import math
 import numpy as np

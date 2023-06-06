@@ -1,3 +1,7 @@
+'''
+Copyright Yann Pollet 2023
+'''
+
 import sys
 # setting path
 sys.path.append('.')

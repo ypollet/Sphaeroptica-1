@@ -1,10 +1,13 @@
+'''
+Copyright Yann Pollet 2023
+'''
+
 import math
 import glob
 import numpy as np
 import cv2 as cv
 import os
 import json
-from scipy import linalg
 from scripts import helpers, reconstruction
 from GUI import show_picture
 

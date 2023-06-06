@@ -1,8 +1,11 @@
+'''
+Copyright Yann Pollet 2023
+'''
 import sys
 
 sys.path.append('..')
 
-import numpy
+import numpy as np
 import json
 
 from random import randint, seed
@@ -95,7 +98,7 @@ class _DimensionsWidget(QWidget):
 
         self.dimension_length.setMinimum(0)
         self.dimension_width.setMinimum(0)
-        dims = numpy.array([0,0]) if not self.camera_calibration_settings.contains("dimensions") else self.camera_calibration_settings.value("dimensions")
+        dims = np.array([0,0]) if not self.camera_calibration_settings.contains("dimensions") else self.camera_calibration_settings.value("dimensions")
         self.dimension_length.setValue(dims[0])
         self.dimension_width.setValue(dims[1])
 
@@ -172,8 +175,8 @@ class CalibrationWidget(QWidget):
 
         self.init_settings()
         self.dir_images = self.camera_calibration_settings.value("directory") if self.camera_calibration_settings.value("directory") is not None else ""
-        self.cam_matrix = numpy.ndarray((3,3))
-        self.dist_matrix = numpy.ndarray((3,3))
+        self.cam_matrix = np.ndarray((3,3))
+        self.dist_matrix = np.ndarray((3,3))
         self.parent = parent
         self.setWindowTitle("Calibration")
 
@@ -227,7 +230,7 @@ class CalibrationWidget(QWidget):
         self.camera_calibration_settings.setValue("width", width)
         self.camera_calibration_settings.setValue("scale", scale)
 
-        cam_matrix, dist_matrix, ext = calibrate(dir_name, dimensions, numpy.array([length*scale.value, width*scale.value]))
+        cam_matrix, dist_matrix, ext = calibrate(dir_name, dimensions, np.array([length*scale.value, width*scale.value]))
 
         self.results.update_results(str(cam_matrix), str(dist_matrix))
         self.cam_matrix = cam_matrix
