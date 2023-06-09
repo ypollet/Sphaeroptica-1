@@ -45,6 +45,9 @@ class ProjPoint():
     def __init__(self, proj_mat, pixel_point) -> None:
         self.proj_mat = proj_mat
         self.pixel_point = pixel_point
+    
+    def __str__(self) -> str:
+        return f"{self.proj_mat} x {self.pixel_point}"
 
 class Point3D():
     def __init__(self, id, label, position = None, dots = None) -> None:

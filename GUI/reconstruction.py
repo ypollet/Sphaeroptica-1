@@ -783,6 +783,7 @@ class Sphere3D(QWidget):
             if self.dots[dot].get_image_dots(self.current_image) != None or dot not in dots:
                 dots[dot] = {"label":self.dots[dot].get_label(),
                             "dot": self.dots[dot].get_image_dots(self.current_image)}
+        print(f'Dots = {dots}')
         self.win = show_picture.QImageViewer(f'{self.directory}/{self.current_image}', dots)
         self.win.show()
         self.win.closeSignal.connect(self.get_dots)
@@ -843,7 +844,6 @@ class Sphere3D(QWidget):
             img_point_undistort = reconstruction.undistort_iter(np.array([img_point]).reshape((1,1,2)), intrinsics, dist_coeffs)
             proj_point = helpers.ProjPoint(proj_mat, img_point_undistort)
             proj_points.append(proj_point)
-
         points3D = reconstruction.triangulate_point(proj_points)
         return tuple(points3D)
 

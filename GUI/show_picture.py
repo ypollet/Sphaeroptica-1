@@ -132,13 +132,17 @@ class QPoints(QScrollArea):
         self.buttons = []
         print(points)
         sorted_points_k = sorted(points)
+        self.indexes = {}
+        index = 0
         for i in sorted_points_k:
             print(points[i]["label"])
             button = QPointButtons(points[i]["label"],i)
             self.buttons.append(button)
             button.button_clicked.connect(self.btnListener)
             self.vbox.addWidget(button)
-        self.check(0)
+            self.indexes[i] = index
+            index += 1
+        self.check(sorted_points_k[0])
         self.w.setLayout(self.vbox)
 
         self.setBackgroundRole(QPalette.ColorRole.Dark)
@@ -151,7 +155,7 @@ class QPoints(QScrollArea):
     def check(self, id):
         for button in self.buttons:
             button.setChecked(False)
-        self.buttons[id].setChecked(True)
+        self.buttons[self.indexes[id]].setChecked(True)
     
     def delete_point(self, id):
         self.delete.emit(id)
@@ -159,10 +163,13 @@ class QPoints(QScrollArea):
     def btnListener(self, action):
         sender_button = self.sender()
         if action == helpers.Action.SELECT:
+            print(f"Check : {sender_button.id}")
             self.check(sender_button.id)
+            self.window().point = sender_button.id
         else:
+            print(f"Delete : {sender_button.id}")
             self.delete_point(sender_button.id)
-        self.window().point = sender_button.id
+        
 
 class QScalePoint(QWidget):
     valChanged = pyqtSignal(object)
@@ -201,7 +208,7 @@ class QImageViewer(QMainWindow):
 
         self.init_settings()
         self.image = None
-        self.point = 0
+        self.point = min(dots.keys())
         full_layout = QHBoxLayout()
 
         # Open Image

@@ -9,6 +9,8 @@ import cv2 as cv
 #import helpers
 from scripts import helpers
 
+from scipy import linalg
+
 OPENCV_DISTORT_VALUES = 8
 
 def get_distance(src, dst):
@@ -58,7 +60,10 @@ def triangulate_point(proj_points):
         A = np.concatenate([A, view]) if A is not None else view
         
     U, s, Vh = np.linalg.svd(A, full_matrices = False)
-    X = Vh[-1,:]
+
+    X = np.squeeze(np.asarray(Vh[-1,:]))
+    print(X.shape)
+
     return X / X[3]
 
 def project_points(point3D, intrinsics, extrinsics, dist_coeffs=np.matrix([0 for x in range(OPENCV_DISTORT_VALUES)])):
