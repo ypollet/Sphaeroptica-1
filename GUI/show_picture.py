@@ -60,7 +60,8 @@ class QImageLabel(QLabel):
             painter.setPen(pen)
 
             point = self.dots[i]["dot"].scaled(self.scaleFactor)
-            painter.drawPoint(point.x, point.y)
+            print(point)
+            painter.drawPoint(int(point.x), int(point.y))
 
         painter.end()
         self.setPixmap(canvas)

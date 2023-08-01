@@ -230,6 +230,7 @@ class DistanceWidget(QWidget):
             self.value.setText("0.0")
             return
         self.value.setText(str(reconstruction.get_distance(self.points[self.left.currentData()].get_position(), self.points[self.right.currentData()].get_position())))
+
 class CommandsWidget(QWidget):
     dot_added = pyqtSignal()
     delete_dot = pyqtSignal(object)
@@ -614,7 +615,7 @@ class Sphere3D(QWidget):
     def next_image(self):
         
         self.current_image = self.get_nearest_image(self._angles_sphere)
-        extrinsics = np.matrix(self.calibration_dict["extrinsics"][self.current_image]["matrix"])[0:3, 0:4]
+        '''extrinsics = np.matrix(self.calibration_dict["extrinsics"][self.current_image]["matrix"])[0:3, 0:4]
         extrinsics_dst = self.virtual_camera_extrinsics(extrinsics)
         homography_image = self.homography(extrinsics, extrinsics_dst)
 
@@ -628,8 +629,8 @@ class Sphere3D(QWidget):
         bytesPerLine = 4 * width
         qImg = QImage(new_image.data, width, height, bytesPerLine, QImage.Format.Format_RGBA8888)
 
+        pixmap = QPixmap.fromImage(qImg)'''
         pixmap = QPixmap(f'{self.directory}/{self.thumbnails}/{self.current_image}')
-        pixmap = QPixmap.fromImage(qImg)
 
         pixmap = pixmap.scaled(self.sphere.height(), self.sphere.width(), Qt.AspectRatioMode.KeepAspectRatio)
         self.sphere.setPixmap(pixmap)
