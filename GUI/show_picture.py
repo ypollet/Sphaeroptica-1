@@ -3,11 +3,13 @@ Copyright Yann Pollet 2023
 '''
 
 import sys
+from PyQt6 import QtGui
 
 import cv2 as cv
 from PyQt6.QtCore import Qt, pyqtSignal, QSettings, QRectF
-from PyQt6.QtGui import QImage, QPixmap, QPalette, QPainter, QAction, QMouseEvent, QCloseEvent, QPen, QColor, QKeyEvent
-from PyQt6.QtWidgets import QWidget, QLabel, QSizePolicy, QScrollArea, QMessageBox, QMainWindow, QMenu, QApplication, QScrollBar, QHBoxLayout, QVBoxLayout, QPushButton, QSpinBox
+from PyQt6.QtGui import QImage, QPixmap, QPalette, QPainter, QAction, QMouseEvent, QCloseEvent, QPen, QColor, QKeyEvent, QDragMoveEvent
+from PyQt6.QtWidgets import (QWidget, QLabel, QSizePolicy, QScrollArea, QMessageBox, QMainWindow, QMenu, QApplication, QScrollBar, QHBoxLayout, 
+                             QVBoxLayout, QPushButton, QSpinBox, QScroller)
 
 from scripts import helpers
 
@@ -20,17 +22,34 @@ class QImageLabel(QLabel):
         self.scaleFactor = base_factor
         self.image = QPixmap.fromImage(image)
         self.setPixmap(self.image.scaled(self.image.size()*self.scaleFactor, Qt.AspectRatioMode.KeepAspectRatio))
-        self.paint_dots() 
+        self.paint_dots()
+        self.drag = False
 
     def set_scale_point(self, val):
         self.point_scale = val
         self.paint_dots()
 
     def mousePressEvent(self, ev: QMouseEvent) -> None:
+        if ev.buttons() & Qt.MouseButton.RightButton:
+            self.drag = True
+            return
         pos = ev.pos()
         point = helpers.Point(float(pos.x()), float(pos.y()))
         self.dots[self.window().point]["dot"] = point.scaled(1/self.scaleFactor)
         self.paint_dots()
+
+    def mouseReleaseEvent(self, ev: QMouseEvent) -> None:
+        if not ev.buttons() & Qt.MouseButton.RightButton:
+            self.drag = False
+    
+    def mouseMoveEvent(self, ev: QMouseEvent) -> None:
+        if self.drag:
+            self.scroll()
+            pass
+    
+    def dragMoveEvent(self, a0: QDragMoveEvent) -> None:
+        if a0.buttons() & Qt.MouseButton.RightButton:
+            pass
 
 
     def paint_dots(self):
@@ -233,6 +252,7 @@ class QImageViewer(QMainWindow):
             return
     
         self.image_label = QImageLabel(image, 0.10, dots, INIT_POINT_WIDTH if self.settings.value("point_scale") is None else int(self.settings.value("point_scale")))
+        QScroller.grabGesture(self.image_label, QScroller.ScrollerGestureType.RightMouseButtonGesture)
         self.image_label.setBackgroundRole(QPalette.ColorRole.Dark)
         self.image_label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Ignored)
         self.image_label.setScaledContents(True)
