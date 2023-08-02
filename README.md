@@ -1,6 +1,6 @@
 # Sphaeroptica
 
-Sphaeroptica is an open-source photogrammetry software that allows to view and mesure an object photographed on multiple angles.
+Sphaeroptica is an open-source viewer based on photogrammetry that allows to view 3D objects without needing to compute a 3D model.
 
 ## Requirements
 
@@ -10,7 +10,6 @@ Here is the list of the requirements needed to run Sphaeropica :
 * numpy
 * scipy
 * pyqt 6
-* matplotlib
 * imutils
 * opencv-contrib-python
 

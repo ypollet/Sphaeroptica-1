@@ -4,6 +4,7 @@ Copyright Yann Pollet 2023
 
 import math
 import glob
+from PyQt6 import QtGui
 import numpy as np
 import cv2 as cv
 import os
@@ -11,11 +12,9 @@ import json
 from scripts import helpers, reconstruction
 from GUI import show_picture
 
-import matplotlib.pyplot as plt
-
 from PyQt6.QtWidgets import (
     QLabel, QWidget, QVBoxLayout, QHBoxLayout, QStackedLayout, QGridLayout,
-    QPushButton, QFileDialog, QSizePolicy, QMessageBox, QScrollArea, QLineEdit,
+    QPushButton, QFileDialog, QColorDialog, QSizePolicy, QMessageBox, QScrollArea, QLineEdit,
     QComboBox
 )
 from PyQt6.QtGui import (
@@ -68,8 +67,8 @@ class PictureButton(QLabel):
         super(QWidget, self).__init__(parent)
         self.setPixmap(image)
         self.key = key
-        self.setFixedWidth(30)
-        self.setFixedHeight(30)
+        self.setFixedWidth(helpers.HEIGHT_COMPONENT)
+        self.setFixedHeight(helpers.HEIGHT_COMPONENT)
     
     def mousePressEvent(self, a0: QMouseEvent) -> None:
         if a0.button() == Qt.MouseButton.LeftButton :
@@ -79,35 +78,66 @@ class PictureButton(QLabel):
             self.right_clicked.emit(self.key)
             return       
 
+class QColorPixmap(QLabel):
+    color_changed = pyqtSignal(object)
+    def __init__(self, size, color : QColor):
+        super(QLabel, self).__init__()
+        self.color = color
+        pixmap = QPixmap(size, size)
+        pixmap.fill(self.color)
+        self.setPixmap(pixmap)
+
+        self.color_dialog = QColorDialog()
+    
+    def mousePressEvent(self, ev: QMouseEvent) -> None:
+        color = self.color_dialog.getColor(self.color)
+        if color.isValid():
+            print(color.name())
+            self.color_changed.emit(color)
+
+
 class QPointEntry(QWidget):
     delete_point = pyqtSignal()
-    label_edit = pyqtSignal(object)
+    label_changed = pyqtSignal(object)
+    color_changed = pyqtSignal(object)
     def __init__(self, point : helpers.Point3D):
         super(QWidget, self).__init__()
         layout = QHBoxLayout()
+
         self.point = point
         self.label = QLineEdit(self)
+        self.label.setFixedHeight(helpers.HEIGHT_COMPONENT)
         self.label.setText(point.label)
-        self.label.returnPressed.connect(self.label_changed)
+        self.label.returnPressed.connect(self.change_label)
         layout.addWidget(self.label)
+
+        self.color_label = QColorPixmap(self.label.height(), point.get_color())
+        layout.addWidget(self.color_label)
+        self.color_label.color_changed.connect(self.change_color)
+
         self.delete_button = QPushButton(text="x")
         self.delete_button.clicked.connect(self.delete)
         self.delete_button.setFixedWidth(20)
         layout.addWidget(self.delete_button)
+        
         self.id = point.id
         self.setLayout(layout)
     
     def delete(self):
         self.delete_point.emit()
+    
+    def change_color(self, color):
+        self.color_changed.emit(color)
 
-    def label_changed(self):
+    def change_label(self):
         self.label.clearFocus()
-        self.label_edit.emit(self.label.text())
+        self.label_changed.emit(self.label.text())
 
 class QPoints(QScrollArea):
     dot_added = pyqtSignal()
     delete_dot = pyqtSignal(object)
     label_changed = pyqtSignal(object)
+    color_changed = pyqtSignal(object)
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -123,6 +153,8 @@ class QPoints(QScrollArea):
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.setMaximumWidth(200)
         self.installEventFilter(self)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setWidgetResizable(True)
     
     def eventFilter(self, source, event):
         if event.type() == QEvent.Type.ShortcutOverride or event.type() == QEvent.Type.KeyPress:
@@ -140,7 +172,8 @@ class QPoints(QScrollArea):
             button = QPointEntry(points[i])
             self.buttons.append(button)
             button.delete_point.connect(self.delete_point)
-            button.label_edit.connect(self.change_label)
+            button.label_changed.connect(self.change_label)
+            button.color_changed.connect(self.change_color)
             self.vbox.addWidget(button)
         self.vbox.addWidget(self.add_pt_btn)
         self.w.setLayout(self.vbox)
@@ -160,6 +193,11 @@ class QPoints(QScrollArea):
         sender_button = self.sender()
         id = sender_button.id
         self.label_changed.emit([id, text])
+    
+    def change_color(self, color):
+        sender_button = self.sender()
+        id = sender_button.id
+        self.color_changed.emit([id, color])
 
 
 class DistanceWidget(QWidget):
@@ -235,6 +273,7 @@ class CommandsWidget(QWidget):
     dot_added = pyqtSignal()
     delete_dot = pyqtSignal(object)
     label_changed = pyqtSignal(object)
+    color_changed = pyqtSignal(object)
 
     def __init__(self, parent):
         super(QWidget, self).__init__(parent)
@@ -282,6 +321,7 @@ class CommandsWidget(QWidget):
 
         self.points.delete_dot.connect(self.delete_point)
         self.points.label_changed.connect(self.change_label)
+        self.points.color_changed.connect(self.change_color)
         self.points.dot_added.connect(self.add_dot)
 
         # Distance calculator
@@ -307,6 +347,9 @@ class CommandsWidget(QWidget):
 
     def change_label(self, id_and_text):
         self.label_changed.emit(id_and_text)
+    
+    def change_color(self, id_and_color):
+        self.color_changed.emit(id_and_color)
 
     def mousePressEvent(self, a0: QMouseEvent) -> None:
         print("Commands Pressed")
@@ -321,9 +364,9 @@ class Sphere3D(QWidget):
 
         # Point3D.id -> Point3D
         self.dots = dict()
-        self.dots[0] = helpers.Point3D(0, 'Front')#, position=(0.010782485813073936, 0.00032211282041287505, 0.03141674225785502, 1.0)) , position=(0.0,0.0,0.0,1.0)
-        self.dots[1] = helpers.Point3D(1, 'Middle')#, position=(0.00503536251302613, 0.0007932051327948597, 0.03249463969616948, 1.0))
-        self.dots[2] = helpers.Point3D(2, 'Back')#, position=(-0.012919467433220783, 0.0035218895786182747, 0.024576051668865468, 1.0))
+        self.dots[0] = helpers.Point3D(0, 'Front', QColor('purple'))#, position=(0.010782485813073936, 0.00032211282041287505, 0.03141674225785502, 1.0)) , position=(0.0,0.0,0.0,1.0)
+        self.dots[1] = helpers.Point3D(1, 'Middle', QColor('red'))#, position=(0.00503536251302613, 0.0007932051327948597, 0.03249463969616948, 1.0))
+        self.dots[2] = helpers.Point3D(2, 'Back', QColor('green'))#, position=(-0.012919467433220783, 0.0035218895786182747, 0.024576051668865468, 1.0))
 
         self.counter = 0
 
@@ -364,6 +407,7 @@ class Sphere3D(QWidget):
         self.commands_widget = CommandsWidget(self)
         self.commands_widget.delete_dot.connect(self.delete_dot)
         self.commands_widget.label_changed.connect(self.change_label)
+        self.commands_widget.color_changed.connect(self.change_color)
         self.commands_widget.dot_added.connect(self.add_dot)
 
         self.commands_widget.setSizePolicy(QSizePolicy.Policy.Maximum,QSizePolicy.Policy.Minimum)
@@ -481,109 +525,6 @@ class Sphere3D(QWidget):
         print(f"Number images = {nbr_img}")
 
         self.current_image = self.next_image()
-    
-    def plot_camera(self):
-        plt.close()
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-
-        print(self.current_image)
-        intrinsics = np.matrix(self.calibration_dict["intrinsics"]["camera matrix"]["matrix"])
-        extrinsics = np.matrix(self.calibration_dict["extrinsics"][self.current_image]["matrix"])[0:3, 0:4]
-
-        rotation = extrinsics[0:3, 0:3]
-
-        trans = extrinsics[0:3, 3]
-        C = helpers.get_camera_world_coordinates(rotation, trans)
-
-        #vec = C - self.center
-        dist = reconstruction.get_distance(self.center, C)
-
-        long, lat = self._angles_sphere
-        long, lat = helpers.degrees2rad(long), helpers.degrees2rad(lat)
-
-        direction_vector = np.around(helpers.get_unit_vector_from_long_lat(0, 0), decimals=10)
-        dist_vec = direction_vector * dist 
-        C_basic = np.transpose(dist_vec) + self.center
-
-        rotation_basic = reconstruction.rotate_z_axis(math.radians(-90)) @ reconstruction.rotate_y_axis(math.radians(90))     
-
-        direction_vector = np.around(helpers.get_unit_vector_from_long_lat(long, lat), decimals=10)
-        dist_vec = direction_vector * dist 
-        C_new = np.transpose(dist_vec) + self.center
-
-        rotation_new = reconstruction.rotate_x_axis(lat) @ reconstruction.rotate_y_axis(long) @ reconstruction.rotate_z_axis(math.radians(-90)) @ reconstruction.rotate_y_axis(math.radians(90)) 
-
-        pix_src_1 = np.matrix([float(0),float(0),1]).T
-        pix_src_2 = np.matrix([float(0),float(self.h),1]).T
-        pix_src_3 = np.matrix([float(self.w),float(0),1]).T
-        pix_src_4 = np.matrix([float(self.w),float(self.h),1]).T
-
-        ray_1 = reconstruction.get_ray_direction(pix_src_1, intrinsics, extrinsics)
-        ray_2 = reconstruction.get_ray_direction(pix_src_2, intrinsics, extrinsics)
-        ray_3 = reconstruction.get_ray_direction(pix_src_3, intrinsics, extrinsics)
-        ray_4 = reconstruction.get_ray_direction(pix_src_4, intrinsics, extrinsics)
-
-        # compute normal
-        cx, cy = intrinsics.item(0,2), intrinsics.item(1,2)
-        ray = reconstruction.get_ray_direction(np.matrix([cx,cy,1]).T, intrinsics, extrinsics)
-        ray = (rotation[2]).T
-        int_1 = reconstruction.intersectPlane((np.array(ray)).squeeze(), np.array(self.center).squeeze(), np.array(C).squeeze(), np.array(ray_1).squeeze())
-        int_2 = reconstruction.intersectPlane((np.array(ray)).squeeze(), np.array(self.center).squeeze(), np.array(C).squeeze(), np.array(ray_2).squeeze())
-        int_3 = reconstruction.intersectPlane((np.array(ray)).squeeze(), np.array(self.center).squeeze(), np.array(C).squeeze(), np.array(ray_3).squeeze())
-        int_4 = reconstruction.intersectPlane((np.array(ray)).squeeze(), np.array(self.center).squeeze(), np.array(C).squeeze(), np.array(ray_4).squeeze())
-
-        print(int_1)
-        print(int_2)
-        print(int_3)
-        print(int_4)
-        X = np.matrix([int_1.item(0),int_2.item(0),int_3.item(0),int_4.item(0)])
-        Y = np.matrix([int_1.item(1),int_2.item(1),int_3.item(1),int_4.item(1)])
-        Z = np.matrix([int_1.item(2),int_2.item(2),int_3.item(2),int_4.item(2)])
-        center_x, center_y, center_z = self.center.item(0),self.center.item(1),self.center.item(2)
-        ax.scatter([center_x],[center_y], [center_z], color="black", label="center")
-
-        #ax.scatter(X,Y,Z, color="red", label="plane")
-        #ax.scatter([C.item(0)],[C.item(1)],[C.item(2)], color="orange", label="src")
-        ax.scatter([C_new.item(0)],[C_new.item(1)],[C_new.item(2)], color="purple", label="virtual camera")
-
-        '''ray_x = (rotation[0]).T
-        ax.quiver(C.item(0),C.item(1),C.item(2), ray_x.item(0), ray_x.item(1), ray_x.item(2), length=0.1, color="red")
-        ray_y = (rotation[1]).T
-        ax.quiver(C.item(0),C.item(1),C.item(2), ray_y.item(0), ray_y.item(1), ray_y.item(2), length=0.1, color="blue")
-        ray_z = (rotation[2]).T
-        ax.quiver(C.item(0),C.item(1),C.item(2), ray_z.item(0), ray_z.item(1), ray_z.item(2), length=0.1, color="green")'''
-
-        ray_x = np.matrix([1,0,0]).T
-        ax.quiver(center_x,center_y,center_z, ray_x.item(0), ray_x.item(1), ray_x.item(2), length=0.1, color="red")
-        ray_y = np.matrix([0,1,0]).T
-        ax.quiver(center_x,center_y,center_z, ray_y.item(0), ray_y.item(1), ray_y.item(2), length=0.1, color="blue")
-        ray_z = np.matrix([0,0,1]).T
-        ax.quiver(center_x,center_y,center_z, ray_z.item(0), ray_z.item(1), ray_z.item(2), length=0.1, color="green")
-
-        ray_x = (rotation_basic[0]).T
-        ax.quiver(C_basic.item(0),C_basic.item(1),C_basic.item(2), ray_x.item(0), ray_x.item(1), ray_x.item(2), length=0.1, color="red")
-        ray_y = (rotation_basic[1]).T
-        ax.quiver(C_basic.item(0),C_basic.item(1),C_basic.item(2), ray_y.item(0), ray_y.item(1), ray_y.item(2), length=0.1, color="blue")
-        ray_z = (rotation_basic[2]).T
-        ax.quiver(C_basic.item(0),C_basic.item(1),C_basic.item(2), ray_z.item(0), ray_z.item(1), ray_z.item(2), length=0.1, color="green")
-
-        ray_x = (rotation_new[0]).T
-        ax.quiver(C_new.item(0),C_new.item(1),C_new.item(2), ray_x.item(0), ray_x.item(1), ray_x.item(2), length=0.1, color="black")
-        ray_y = (rotation_new[1]).T
-        ax.quiver(C_new.item(0),C_new.item(1),C_new.item(2), ray_y.item(0), ray_y.item(1), ray_y.item(2), length=0.1, color="blue")
-        ray_z = (rotation_new[2]).T
-        ax.quiver(C_new.item(0),C_new.item(1),C_new.item(2), ray_z.item(0), ray_z.item(1), ray_z.item(2), length=0.1, color="green")
-        
-        ax.plot([], [], [], color="r", label="x axis")
-        ax.plot([], [], [], color="g", label="y axis")
-        ax.plot([], [], [], color="b", label="z axis")
-
-        ax.set_xlim([-0.3, 0.3])
-        ax.set_ylim([-0.3, 0.3])
-        ax.set_zlim([-0.3, 0.3])
-        ax.legend(loc="upper right")
-        plt.show()
 
     def delete_dot(self, id):
         self.dots.pop(id)
@@ -594,10 +535,18 @@ class Sphere3D(QWidget):
         id, text = id_and_text[0], id_and_text[1]
         self.dots[id].set_label(text)
     
+    def update_points(self):
+        self.commands_widget.points.load_points(self.dots)
+    
+    def change_color(self, id_and_color):
+        id, color = id_and_color[0], id_and_color[1]
+        self.dots[id].set_color(color)
+        self.update_points()
+    
     def add_dot(self):
         max_id = max(self.dots)+1
         self.dots[max_id] = helpers.Point3D(max_id, f'Point_{max_id}')
-        self.commands_widget.points.load_points(self.dots)
+        self.update_points()
 
     def get_nearest_image(self, pos):
         best_angle = float('inf')
@@ -742,9 +691,6 @@ class Sphere3D(QWidget):
             self.next_image()
     
     def mousePressEvent(self, ev: QMouseEvent) -> None:
-        if ev.button() == Qt.MouseButton.RightButton :
-            self.plot_camera()
-            return
         self.activated = True
         self.last_pos = ev.pos()
         self._old_angles = (self._angles_sphere[0], self._angles_sphere[1])
@@ -767,30 +713,15 @@ class Sphere3D(QWidget):
     def values_clicked(self) -> None:
         intrinsics = np.matrix(self.calibration_dict["intrinsics"]["camera matrix"]["matrix"])
         distCoeffs = np.matrix(self.calibration_dict["intrinsics"]["distortion matrix"]["matrix"])
-        image1_ext = np.matrix(self.calibration_dict["extrinsics"][self.current_image]["matrix"])
-        image1_ext = image1_ext[0:3, 0:4]
+        extrinsics = np.matrix(self.calibration_dict["extrinsics"][self.current_image]["matrix"])
+        extrinsics = extrinsics[0:3, 0:4]
 
-        dots = dict()
-
-        '''for dot in self.dots:
-            if self.dots[dot] is not None and self.dots[dot].position != None:
-                point = np.matrix([list(self.dots[dot].position)])
-                pos = reconstruction.project_points(point, intrinsics, image1_ext, distCoeffs)
-                print(f"{self.dots[dot].get_label()} : {pos}")
-                dots[dot] = {"label":self.dots[dot].get_label(),
-                            "dot": helpers.Point(pos[0], pos[1])}'''
-           
-        for dot in self.dots:
-            if self.dots[dot].get_image_dots(self.current_image) != None or dot not in dots:
-                dots[dot] = {"label":self.dots[dot].get_label(),
-                            "dot": self.dots[dot].get_image_dots(self.current_image)}
-        print(f'Dots = {dots}')
+        dots = {k:dot.to_tuple(self.current_image, intrinsics, extrinsics, distCoeffs) for k, dot in self.dots.items()}
         self.win = show_picture.QImageViewer(f'{self.directory}/{self.current_image}', dots)
         self.win.show()
         self.win.closeSignal.connect(self.get_dots)
     
     def get_dots(self, dots):
-        all_pos = True
         nbr_img = 0
         mean_error = 0
         intrinsics = np.matrix(self.calibration_dict["intrinsics"]["camera matrix"]["matrix"])
@@ -801,7 +732,6 @@ class Sphere3D(QWidget):
             pos = self.estimate_position(self.dots[dot])
             if pos is not None:
                 self.dots[dot].set_position(pos)
-            all_pos = all_pos and (self.dots[dot].get_position() != None)
             print(f"{self.dots[dot].label} : {self.dots[dot].get_position()}")
             if self.dots[dot].get_position() is not None:
                 dot_images = self.dots[dot].get_dots()
@@ -896,7 +826,6 @@ class ReconstructionWidget(QWidget):
         super(ReconstructionWidget, self).__init__(parent)
 
         self.init_settings()
-        self.reconstruction_settings.setValue("directory", None)
         try:
             file_settings = self.reconstruction_settings.value("directory")
             self.dir_images = QFileInfo(file_settings) if file_settings is not None and QFileInfo(file_settings).exists() else None

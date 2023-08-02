@@ -38,7 +38,6 @@ class QImageLabel(QLabel):
         point = helpers.Point(float(pos.x()), float(pos.y()))
         self.dots[self.window().point]["dot"] = point.scaled(1/self.scaleFactor)
         self.paint_dots()
-    
 
 
     def paint_dots(self):
@@ -46,17 +45,11 @@ class QImageLabel(QLabel):
         painter = QPainter(canvas)
         pen = QPen()
         pen.setWidth(self.point_scale)
-        
+        print(self.dots)
         for i in self.dots:
             if(self.dots[i]["dot"] is None):
                 continue
-            if i == 0:
-                pen.setColor(QColor('red'))
-            else:
-                if i == 1:
-                    pen.setColor(QColor('green'))
-                else:
-                    pen.setColor(QColor('blue'))
+            pen.setColor(self.dots[i]['color'])
             painter.setPen(pen)
 
             point = self.dots[i]["dot"].scaled(self.scaleFactor)
@@ -100,15 +93,30 @@ class QPointButton(QPushButton):
         super(QPushButton, self).__init__(label)
         self.action = action
 
+
+class QColorPixmap(QLabel):
+    def __init__(self, size, color : QColor):
+        super(QLabel, self).__init__()
+        pixmap = QPixmap(size, size)
+        pixmap.fill(color)
+        self.setPixmap(pixmap)
+
 class QPointButtons(QWidget):
     button_clicked = pyqtSignal(object)
-    def __init__(self, label, id):
+    def __init__(self, label, color, id):
         super(QWidget, self).__init__()
         layout = QHBoxLayout()
+
         self.select_button = QPointButton(label, helpers.Action.SELECT)
+        self.select_button.setFixedHeight(helpers.HEIGHT_COMPONENT)
         self.select_button.setCheckable(True)
         self.select_button.clicked.connect(self.btnListener)
         layout.addWidget(self.select_button)
+
+        print(self.select_button.height())
+        self.color = QColorPixmap(self.select_button.height(), color)
+        layout.addWidget(self.color)
+
         self.delete_button = QPointButton("x", helpers.Action.DELETE)
         self.delete_button.clicked.connect(self.btnListener)
         self.delete_button.setFixedWidth(20)
@@ -124,6 +132,7 @@ class QPointButtons(QWidget):
         action = sender_button.action
         self.button_clicked.emit(action)
 
+
 class QPoints(QScrollArea):
     delete = pyqtSignal(object)
     def __init__(self, points):
@@ -137,7 +146,7 @@ class QPoints(QScrollArea):
         index = 0
         for i in sorted_points_k:
             print(points[i]["label"])
-            button = QPointButtons(points[i]["label"],i)
+            button = QPointButtons(points[i]["label"], points[i]["color"],i)
             self.buttons.append(button)
             button.button_clicked.connect(self.btnListener)
             self.vbox.addWidget(button)
@@ -152,6 +161,8 @@ class QPoints(QScrollArea):
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.setWidget(self.w)
         self.setMaximumWidth(200)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setWidgetResizable(True)
     
     def check(self, id):
         for button in self.buttons:

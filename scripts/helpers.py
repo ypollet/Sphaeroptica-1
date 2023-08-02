@@ -6,6 +6,10 @@ from enum import Enum
 import math
 import numpy as np
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QColor
+from scripts import reconstruction
+
+HEIGHT_COMPONENT = 25
 
 class Indexes(Enum):
     HOME = 0
@@ -50,9 +54,10 @@ class ProjPoint():
         return f"{self.proj_mat} x {self.pixel_point}"
 
 class Point3D():
-    def __init__(self, id, label, position = None, dots = None) -> None:
+    def __init__(self, id, label, color=QColor('blue'), position = None, dots = None) -> None:
         self.id = id
         self.label = label
+        self.color = color
         self.dots = dots if dots is not None else dict()
         self.position = position
 
@@ -70,6 +75,12 @@ class Point3D():
 
     def set_position(self, pos):
         self.position = pos
+
+    def get_color(self):
+        return self.color
+
+    def set_color(self, color):
+        self.color = color
     
     def add_dot(self, image, dot):
         self.dots[image] = dot
@@ -79,6 +90,12 @@ class Point3D():
     
     def get_dots(self):
         return self.dots
+    
+    def to_tuple(self, image, intrinsics, extrinsics, distCoeffs):
+        return {"label": self.label,
+                "dot": self.dots[image] if image in self.dots else None,
+                "color": self.color,
+                "position": reconstruction.project_points(self.position, intrinsics, extrinsics, distCoeffs) if self.position is not None else None }
     
     def __str__(self) -> str:
         string = f"{self.label} : {self.position}\n"
