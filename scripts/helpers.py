@@ -92,10 +92,11 @@ class Point3D():
         return self.dots
     
     def to_tuple(self, image, intrinsics, extrinsics, distCoeffs):
+        rep_point = reconstruction.project_points(np.matrix(self.position), intrinsics, extrinsics, distCoeffs) if self.position is not None else None
         return {"label": self.label,
                 "dot": self.dots[image] if image in self.dots else None,
                 "color": self.color,
-                "position": reconstruction.project_points(self.position, intrinsics, extrinsics, distCoeffs) if self.position is not None else None }
+                "position": Point(rep_point.item(0),rep_point.item(1)) if rep_point is not None else None }
     
     def __str__(self) -> str:
         string = f"{self.label} : {self.position}\n"

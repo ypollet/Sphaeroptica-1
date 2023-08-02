@@ -364,7 +364,7 @@ class Sphere3D(QWidget):
 
         # Point3D.id -> Point3D
         self.dots = dict()
-        self.dots[0] = helpers.Point3D(0, 'Front', QColor('purple'))#, position=(0.010782485813073936, 0.00032211282041287505, 0.03141674225785502, 1.0)) , position=(0.0,0.0,0.0,1.0)
+        self.dots[0] = helpers.Point3D(0, 'Front', QColor('blue'))#, position=(0.010782485813073936, 0.00032211282041287505, 0.03141674225785502, 1.0)) , position=(0.0,0.0,0.0,1.0)
         self.dots[1] = helpers.Point3D(1, 'Middle', QColor('red'))#, position=(0.00503536251302613, 0.0007932051327948597, 0.03249463969616948, 1.0))
         self.dots[2] = helpers.Point3D(2, 'Back', QColor('green'))#, position=(-0.012919467433220783, 0.0035218895786182747, 0.024576051668865468, 1.0))
 

@@ -5,7 +5,7 @@ Copyright Yann Pollet 2023
 import sys
 
 import cv2 as cv
-from PyQt6.QtCore import Qt, pyqtSignal, QSettings
+from PyQt6.QtCore import Qt, pyqtSignal, QSettings, QRectF
 from PyQt6.QtGui import QImage, QPixmap, QPalette, QPainter, QAction, QMouseEvent, QCloseEvent, QPen, QColor, QKeyEvent
 from PyQt6.QtWidgets import QWidget, QLabel, QSizePolicy, QScrollArea, QMessageBox, QMainWindow, QMenu, QApplication, QScrollBar, QHBoxLayout, QVBoxLayout, QPushButton, QSpinBox
 
@@ -20,14 +20,7 @@ class QImageLabel(QLabel):
         self.scaleFactor = base_factor
         self.image = QPixmap.fromImage(image)
         self.setPixmap(self.image.scaled(self.image.size()*self.scaleFactor, Qt.AspectRatioMode.KeepAspectRatio))
-        #self.init()
-        self.paint_dots()
-
-    def init(self) -> None :
-        if self.dots[1]["dot"] is not None:
-            return
-        point = helpers.Point(self.image.width()/2, self.image.height()/2)
-        self.dots[1]["dot"] = point
+        self.paint_dots() 
 
     def set_scale_point(self, val):
         self.point_scale = val
@@ -47,11 +40,15 @@ class QImageLabel(QLabel):
         pen.setWidth(self.point_scale)
         print(self.dots)
         for i in self.dots:
-            if(self.dots[i]["dot"] is None):
-                continue
             pen.setColor(self.dots[i]['color'])
             painter.setPen(pen)
 
+            if(self.dots[i]["dot"] is None):
+                if self.dots[i]["position"] is not None:
+                    point = self.dots[i]["position"].scaled(self.scaleFactor)
+                    print(point)
+                    painter.drawArc(QRectF(point.x, point.y,float(self.point_scale)/3,float(self.point_scale)/3), 0, 16*360)
+                continue
             point = self.dots[i]["dot"].scaled(self.scaleFactor)
             print(point)
             painter.drawPoint(int(point.x), int(point.y))
@@ -194,7 +191,7 @@ class QScalePoint(QWidget):
         self.label = QLabel("Point Scale: ", self)
         self.size = QSpinBox(self)
         self.size.setMinimum(1)
-        self.size.setMaximum(15)
+        self.size.setMaximum(30)
         self.size.setSuffix("px")
         self.size.setValue(INIT_POINT_WIDTH if not self.settings.contains("point_scale") else int(self.settings.value("point_scale")))
         self.size.valueChanged.connect(self.signal_value)
