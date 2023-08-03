@@ -27,7 +27,7 @@ class MainWindow(QMainWindow):
 
         self.init_settings()
 
-        self.setWindowTitle("Ins3cD")
+        self.setWindowTitle("Sphaeroptica")
 
         self.layout = QStackedLayout()
         self.stack_widgets = []
@@ -62,7 +62,7 @@ class MainWindow(QMainWindow):
             self.layout.setCurrentIndex(back)
     
     def init_settings(self):
-        self.camera_calibration_settings = QSettings("Ins3cD", "camera_calibration")
+        self.camera_calibration_settings = QSettings("Sphaeroptica", "camera_calibration")
     
     def _create_actions(self):
         self.back_action = QAction(QIcon("icons/arrow-turn-180-left.png"), "Back", self)
@@ -70,25 +70,27 @@ class MainWindow(QMainWindow):
         self.back_action.triggered.connect(self.get_back_widget)
 
         self.calibration_action = QAction("Calib.")
-        self.back_action.triggered.connect(self.go_to_calib)
+        self.calibration_action.triggered.connect(self.go_to_calib)
         
         self.new_action = QAction("New File..", self)
         self.new_action.triggered.connect(self.new_file)
         self.open_action = QAction("Open..", self)
         self.open_action.triggered.connect(self.open_file)
 
+
     def go_to_calib(self):
+        print("Go_to_calib")
         self.set_widget(Indexes.CAM)
 
     def open_file(self):
         self.rec.reconstruction_settings.setValue("directory", None)
-        self.set_widget(Indexes.REC)
         self.rec.init.import_project()
+        self.set_widget(Indexes.REC)
 
     def new_file(self):
         self.rec.reconstruction_settings.setValue("directory", None)
-        self.set_widget(Indexes.REC)
         self.rec.init.create_project()
+        self.set_widget(Indexes.REC)
 
     def _create_menu_bar(self):
         menu = self.menuBar()

@@ -10,7 +10,7 @@ import cv2 as cv
 import os
 import json
 from scripts import helpers, reconstruction
-from GUI import show_picture
+from GUI import show_picture, import_project
 
 from PyQt6.QtWidgets import (
     QLabel, QWidget, QVBoxLayout, QHBoxLayout, QStackedLayout, QGridLayout,
@@ -433,19 +433,6 @@ class Sphere3D(QWidget):
             self.calibration_dict = json.load(f)
             self.thumbnails = self.calibration_dict["thumbnails"]
             images_thumbnails = glob.glob(f'{self.directory}/{self.thumbnails}/*')
-            if("commands" not in self.calibration_dict):
-                self.calibration_dict["commands"] = {
-                    #Front is used as complete calibration for the angles
-                    helpers.Keys.FRONT.name: (0,0),
-                    helpers.Keys.POST.name: (-180, 0),
-                    helpers.Keys.LEFT.name: (90, 0),
-                    helpers.Keys.RIGHT.name: (-90, 0),
-                    helpers.Keys.INFERIOR.name: (0, -90),
-                    helpers.Keys.SUPERIOR.name: (0, 90)
-                    }
-                with open(self.calibration_file, "w") as f_to_write:
-                    json.dump(self.calibration_dict, f_to_write)
-            self.commands = self.calibration_dict["commands"]
         image_calibration = {}
         self.center = np.matrix([0,0,0]).T
         intrinsics = np.matrix(self.calibration_dict["intrinsics"]["camera matrix"]["matrix"])
@@ -811,12 +798,7 @@ class InitWidget(QWidget):
         self.parent().layout.setCurrentIndex(1)
     
     def create_project(self):
-        dlg = QMessageBox(self)
-        dlg.setWindowTitle("Create New Project")
-        dlg.setText("Not Implemented")
-        dlg.setStandardButtons(QMessageBox.StandardButton.Ok)
-        dlg.setIcon(QMessageBox.Icon.Information)
-
+        dlg = import_project.QImportProject()
         dlg.exec()
 
 

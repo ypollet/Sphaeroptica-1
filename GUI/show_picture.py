@@ -2,8 +2,6 @@
 Copyright Yann Pollet 2023
 '''
 
-import sys
-from PyQt6 import QtGui
 
 import cv2 as cv
 from PyQt6.QtCore import Qt, pyqtSignal, QSettings, QRectF
