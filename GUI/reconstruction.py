@@ -792,7 +792,7 @@ class InitWidget(QWidget):
         self.choices = QHBoxLayout()
         self.cam_calib = QPushButton(text="Import",parent=self)
         self.cam_calib.setFixedSize(500, 300)
-        self.cam_calib.clicked.connect(self.import_clicked)
+        self.cam_calib.clicked.connect(self.import_project)
 
 
         rec = QPushButton(text="Create new project",parent=self)
@@ -805,7 +805,7 @@ class InitWidget(QWidget):
         self.layout.addLayout(self.choices)
         self.setLayout(self.layout)
     
-    def import_clicked(self):
+    def import_project(self):
         dir_ = QFileInfo(QFileDialog.getOpenFileName(self, "Open Calibration File", ".", "JSON (*.json)")[0])
         self.parent().load_dir(dir_)
         self.parent().layout.setCurrentIndex(1)

@@ -23,30 +23,16 @@ class QImageLabel(QLabel):
         self.image = QPixmap.fromImage(image)
         self.setPixmap(self.image.scaled(self.image.size()*self.scaleFactor, Qt.AspectRatioMode.KeepAspectRatio))
         self.paint_dots()
-        self.drag = False
 
     def set_scale_point(self, val):
         self.point_scale = val
         self.paint_dots()
 
-    def mousePressEvent(self, ev: QMouseEvent) -> None:
-        if ev.buttons() & Qt.MouseButton.RightButton:
-            self.drag = True
-            self.last_pos = ev.pos()
-            return
+    def mousePressEvent(self, ev: QMouseEvent) -> None:  
         pos = ev.pos()
         point = helpers.Point(float(pos.x()), float(pos.y()))
         self.dots[self.window().point]["dot"] = point.scaled(1/self.scaleFactor)
         self.paint_dots()
-
-    def mouseReleaseEvent(self, ev: QMouseEvent) -> None:
-        if not ev.buttons() & Qt.MouseButton.RightButton:
-            self.drag = False
-    
-    def dragMoveEvent(self, a0: QDragMoveEvent) -> None:
-        if a0.buttons() & Qt.MouseButton.RightButton:
-            pass
-
 
     def paint_dots(self):
         canvas = self.image.scaled(self.image.size()*self.scaleFactor, Qt.AspectRatioMode.KeepAspectRatio)

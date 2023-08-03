@@ -7,13 +7,13 @@ import sys
 sys.path.append('.')
 
 from PyQt6.QtWidgets import (
-    QMainWindow, QStackedLayout, QWidget, QToolBar
+    QMainWindow, QStackedLayout, QWidget, QToolBar, QMenu
 )
 from PyQt6.QtGui import (
     QAction, QIcon, QKeyEvent
 )
 from PyQt6.QtCore import (
-    QSettings, Qt
+    QSettings, Qt, pyqtSignal
 )
 from reconstruction import ReconstructionWidget
 from home import HomeWidget
@@ -32,9 +32,13 @@ class MainWindow(QMainWindow):
         self.layout = QStackedLayout()
         self.stack_widgets = []
 
-        self.layout.addWidget(HomeWidget(self))
-        self.layout.addWidget(CalibrationWidget(self))
-        self.layout.addWidget(ReconstructionWidget(self))
+        self.home = HomeWidget(self)
+        self.calib = CalibrationWidget(self)
+        self.rec = ReconstructionWidget(self)
+
+        self.layout.addWidget(self.home)
+        self.layout.addWidget(self.calib)
+        self.layout.addWidget(self.rec)
 
         self.layout.setCurrentIndex(0)
 
@@ -42,8 +46,8 @@ class MainWindow(QMainWindow):
         widget.setLayout(self.layout)
         self.setCentralWidget(widget)
 
-        toolbar = ToolBar("My main toolbar", self)
-        self.addToolBar(toolbar)
+        self._create_actions()
+        self._create_menu_bar()
 
     def set_widget(self, id : Indexes):
         print(f"{self.layout.currentIndex()} -> {id.value}")
@@ -60,14 +64,41 @@ class MainWindow(QMainWindow):
     def init_settings(self):
         self.camera_calibration_settings = QSettings("Ins3cD", "camera_calibration")
     
+    def _create_actions(self):
+        self.back_action = QAction(QIcon("icons/arrow-turn-180-left.png"), "Back", self)
+        #self.back_action.setStatusTip("Go back")
+        self.back_action.triggered.connect(self.get_back_widget)
 
-class ToolBar(QToolBar):
+        self.calibration_action = QAction("Calib.")
+        self.back_action.triggered.connect(self.go_to_calib)
+        
+        self.new_action = QAction("New File..", self)
+        self.new_action.triggered.connect(self.new_file)
+        self.open_action = QAction("Open..", self)
+        self.open_action.triggered.connect(self.open_file)
 
-    def __init__(self, string, parent):
-        super(QToolBar, self).__init__(string, parent=parent)
-        self.parent = parent
-        button_action = QAction(QIcon("icons/arrow-turn-180-left.png"), "back", self)
-        button_action.setStatusTip("This is your button")
-        button_action.triggered.connect(parent.get_back_widget)
-        self.addAction(button_action)
+    def go_to_calib(self):
+        self.set_widget(Indexes.CAM)
+
+    def open_file(self):
+        self.rec.reconstruction_settings.setValue("directory", None)
+        self.set_widget(Indexes.REC)
+        self.rec.init.import_project()
+
+    def new_file(self):
+        self.rec.reconstruction_settings.setValue("directory", None)
+        self.set_widget(Indexes.REC)
+        self.rec.init.create_project()
+
+    def _create_menu_bar(self):
+        menu = self.menuBar()
+        
+        menu.addAction(self.back_action)
+        
+        menu.addAction(self.calibration_action)
+
+        file_menu = menu.addMenu("Reconst.")
+        file_menu.addAction(self.new_action)
+        file_menu.addAction(self.open_action)
+        
 
