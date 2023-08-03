@@ -32,6 +32,7 @@ class QImageLabel(QLabel):
     def mousePressEvent(self, ev: QMouseEvent) -> None:
         if ev.buttons() & Qt.MouseButton.RightButton:
             self.drag = True
+            self.last_pos = ev.pos()
             return
         pos = ev.pos()
         point = helpers.Point(float(pos.x()), float(pos.y()))
@@ -41,11 +42,6 @@ class QImageLabel(QLabel):
     def mouseReleaseEvent(self, ev: QMouseEvent) -> None:
         if not ev.buttons() & Qt.MouseButton.RightButton:
             self.drag = False
-    
-    def mouseMoveEvent(self, ev: QMouseEvent) -> None:
-        if self.drag:
-            self.scroll()
-            pass
     
     def dragMoveEvent(self, a0: QDragMoveEvent) -> None:
         if a0.buttons() & Qt.MouseButton.RightButton:
@@ -252,12 +248,13 @@ class QImageViewer(QMainWindow):
             return
     
         self.image_label = QImageLabel(image, 0.10, dots, INIT_POINT_WIDTH if self.settings.value("point_scale") is None else int(self.settings.value("point_scale")))
-        QScroller.grabGesture(self.image_label, QScroller.ScrollerGestureType.RightMouseButtonGesture)
+        
         self.image_label.setBackgroundRole(QPalette.ColorRole.Dark)
         self.image_label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Ignored)
         self.image_label.setScaledContents(True)
 
         self.image_area = QScrollArea()
+        QScroller.grabGesture(self.image_area, QScroller.ScrollerGestureType.RightMouseButtonGesture)
         self.image_area.setBackgroundRole(QPalette.ColorRole.Dark)
         self.image_area.setWidget(self.image_label)
         self.image_area.setVisible(False)
