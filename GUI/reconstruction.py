@@ -9,8 +9,10 @@ import numpy as np
 import cv2 as cv
 import os
 import json
+from PIL import Image
 from scripts import helpers, reconstruction
 from GUI import show_picture, import_project
+from collections import deque
 
 from PyQt6.QtWidgets import (
     QLabel, QWidget, QVBoxLayout, QHBoxLayout, QStackedLayout, QGridLayout,
@@ -513,6 +515,11 @@ class Sphere3D(QWidget):
 
         self.current_image = self.next_image()
 
+        #init dots again
+        self.dots[0] = helpers.Point3D(0, 'Front', QColor('blue'))
+        self.dots[1] = helpers.Point3D(1, 'Middle', QColor('red'))
+        self.dots[2] = helpers.Point3D(2, 'Back', QColor('green'))
+
     def delete_dot(self, id):
         self.dots.pop(id)
         self.commands_widget.points.load_points(self.dots)
@@ -797,9 +804,76 @@ class InitWidget(QWidget):
         self.parent().load_dir(dir_)
         self.parent().layout.setCurrentIndex(1)
     
+    def fixed_directory(self, directory):
+        print(f"dir : {self.dir} vs {directory} : {self.dir == directory}")
+
+        if self.dir != directory:
+            self.dlg_save.setDirectory(self.dir)
+
+    
     def create_project(self):
         dlg = import_project.QImportProject()
-        dlg.exec()
+        dlg.setWindowModality(Qt.WindowModality.NonModal)
+        if dlg.exec():
+            print("accepted")
+            self.dir = dlg.dir_image
+            self.calib = dlg.calib
+            self.calib_file_name = QFileDialog.getSaveFileName(self, "Save Calibration File", self.dir+"/.json","Json Files (*.json)")[0]
+            print(self.calib_file_name)
+            
+            print(not self.calib_file_name.strip())
+            if not self.calib_file_name.strip():
+                # canceled
+                return
+            
+            # Checker les thumbnails
+            
+            if not os.path.exists(f'{self.dir}/{self.calib["thumbnails"]}'):
+                os.makedirs(f'{self.dir}/{self.calib["thumbnails"]}')
+            
+            images_thumbnails = set(glob.glob(f'{self.dir}/{self.calib["thumbnails"]}/*'))
+
+            print(os.path.exists(f'{self.dir}/{self.calib["thumbnails"]}'))
+            print(f'{self.dir}/{self.calib["thumbnails"]}')
+
+
+            print(len(images_thumbnails))
+            print(type(images_thumbnails))
+
+            queue_img_to_make = deque()
+            
+            thumb_w = thumb_h = 640
+            #sauver les thumbnails
+            for key in self.calib["extrinsics"]:
+                #print(key)
+                if f'{self.dir}/{self.calib["thumbnails"]}/{key}' not in images_thumbnails:
+                    print(key)
+                    queue_img_to_make.append(key)
+                else:
+                    #get dimensions
+                    print(f'{self.dir}/{self.calib["thumbnails"]}/{key}')
+                    with Image.open(f'{self.dir}/{self.calib["thumbnails"]}/{key}') as im:
+                        thumb_w = im.width
+                        thumb_h = im.height
+            
+            print(len(queue_img_to_make))
+            while len(queue_img_to_make) != 0:
+                print(len(queue_img_to_make))
+                img = queue_img_to_make.pop()
+                print(img)
+                with Image.open(f'{self.dir}/{img}') as im_basic:
+                    im_basic.thumbnail((thumb_w, thumb_h), Image.LANCZOS)
+                    thumb_w = im_basic.width
+                    thumb_h = im_basic.height
+                    im_basic.save(f'{self.dir}/{self.calib["thumbnails"]}/{img}')
+
+            self.calib["thumbnails_width"] = thumb_w
+            self.calib["thumbnails_height"] = thumb_h
+            with open(self.calib_file_name, "w") as f_to_write:
+                json.dump(self.calib, f_to_write)
+            
+            self.parent().load_dir(QFileInfo(self.calib_file_name))
+            self.parent().layout.setCurrentIndex(1)
 
 
 class ReconstructionWidget(QWidget):

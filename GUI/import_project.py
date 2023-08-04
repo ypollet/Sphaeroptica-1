@@ -1,10 +1,11 @@
 from PyQt6 import QtGui
-from PyQt6.QtCore import pyqtSignal, QSettings
+from PyQt6.QtCore import pyqtSignal, QSettings, QFileInfo
 from PyQt6.QtGui import QCloseEvent, QKeyEvent
 from PyQt6.QtWidgets import (QWidget, QFileDialog, QDialog, QDialogButtonBox, QVBoxLayout, QLineEdit, QHBoxLayout, QLabel, QPushButton, QCheckBox)
 
 from bs4 import BeautifulSoup
 import numpy as np 
+import json
 
 from scripts import helpers
 
@@ -96,12 +97,12 @@ class _IntrinsicsWidget(QWidget):
         intrinsics["camera matrix"] = {}
         rows_cam_mat = int(b_cam_mat.find('rows').text)
         intrinsics["camera matrix"]["shape"] = [rows_cam_mat, cols_cam_mat]
-        intrinsics["camera matrix"]["matrix"] = np.matrix(cam_mat).reshape((rows_cam_mat, cols_cam_mat))
+        intrinsics["camera matrix"]["matrix"] = np.matrix(cam_mat).reshape((cols_cam_mat, rows_cam_mat)).tolist()
 
         intrinsics["distortion matrix"] = {}
         rows_dist_coeffs = int(b_dist_coeffs.find('rows').text)
         intrinsics["distortion matrix"]["shape"] = [rows_dist_coeffs, cols_dist_coeffs]
-        intrinsics["distortion matrix"]["matrix"] = np.matrix(dist_coeffs).reshape((rows_dist_coeffs, cols_dist_coeffs))
+        intrinsics["distortion matrix"]["matrix"] = np.matrix(dist_coeffs).reshape((cols_dist_coeffs, rows_dist_coeffs)).tolist()
 
         return intrinsics
         
@@ -140,8 +141,8 @@ class _ExtrinsicsWidget(QWidget):
         self.extrinsics_edit.setText(extrinsics_file[0])
 
         extrinsics = None
-        with open('data/geonemus-geoffroyii/export_intrinsics.xml', 'r') as f:
-            extrinsics = f.read()
+        with open(extrinsics_file[0], 'r') as f:
+            extrinsics = json.load(f)
         self.updated.emit(extrinsics)
     
     def get_value(self):
@@ -174,8 +175,8 @@ class _ThumbnailsFolderWidget(QHBoxLayout):
         return str(self.thumb_edit.text())
 
     def open_directory(self):
-        dir_ = QFileDialog.getExistingDirectory(None, 'Select a folder:', self.get_value(), QFileDialog.Option.ShowDirsOnly)
-        self.thumb_edit.setText(dir_)
+        dir_ = QFileInfo(QFileDialog.getExistingDirectory(None, 'Select a folder:', self.get_value(), QFileDialog.Option.ShowDirsOnly))
+        self.thumb_edit.setText(dir_.fileName())
         self.updated.emit(dir_)
 
 
@@ -210,68 +211,9 @@ class QImportProject(QDialog):
         self.setWindowTitle("Import project")
         self.init_settings()
 
-        QBtn = QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        self.calib = {}
 
-        self.buttonBox = QDialogButtonBox(QBtn)
-
-        self.buttonBox.accepted.connect(self.accept)
-        self.buttonBox.rejected.connect(self.reject)
-
-        self.dir_image = None
-        self.intrinsics = None
-        self.extrinsics = None
-        self.thumbnails_bool = False
-        self.thumbnails = True
-
-        self.project_dict = {}
-
-        self.layout = QVBoxLayout()
-        
-        self.dir_widget = _DirWidget()
-        self.dir_widget.updated.connect(self.update_dir_image)
-        self.layout.addWidget(self.dir_widget)
-
-        self.int_widget = _IntrinsicsWidget(self.dir_image)
-        self.int_widget.updated.connect(self.update_intrinsics)
-        self.layout.addWidget(self.int_widget)
-
-        self.ext_widget = _ExtrinsicsWidget(self.dir_image)
-        self.ext_widget.updated.connect(self.update_dir_image)
-        self.layout.addWidget(self.ext_widget)
-
-        self.thumb_widget = _ThumbnailsWidget()
-        self.thumb_widget.updated.connect(self.update_dir_image)
-        self.layout.addWidget(self.thumb_widget)
-        
-        self.layout.addWidget(self.buttonBox)
-        self.setLayout(self.layout)
-    
-    def update_dir_image(self, dir):
-        self.dir_image = dir
-
-    def update_intrinsics(self, intrinsics):
-        self.intrinsics = intrinsics
-
-    def update_extrinsics(self, extrinsics):
-        self.extrinsics = extrinsics
-
-    def update_thumbnails(self, thumb):
-        self.thumbnails_bool = thumb[0]
-        if self.thumbnails_bool:
-            self.thumbnails : thumb[1]
-        else:
-            self.thumbnails = "thumbnails"
-    
-    def closeEvent(self, a0: QCloseEvent) -> None:
-        calib = {}
-
-        if not self.thumbnails_bool:
-            pass
-
-        calib["thumbnails"] = self.thumbnails
-        calib["intrinsics"] = self.intrinsics
-        calib["extrinsics"] = self.extrinsics
-        calib["commands"] = {
+        self.calib["commands"] = {
                     #Front is used as complete calibration for the angles
                     helpers.Keys.FRONT.name: (0,0),
                     helpers.Keys.POST.name: (-180, 0),
@@ -280,6 +222,64 @@ class QImportProject(QDialog):
                     helpers.Keys.INFERIOR.name: (0, -90),
                     helpers.Keys.SUPERIOR.name: (0, 90)
                     }
+        self.calib["thumbnails"] = "thumbnails"
 
+        QBtn = QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+
+        self.buttonBox = QDialogButtonBox(QBtn)
+
+        #self.buttonBox.button(QDialogButtonBox.StandardButton.Ok).setEnabled(False)
+
+        self.buttonBox.accepted.connect(self.accept)
+        self.buttonBox.rejected.connect(self.reject)
+
+        self.dir_image = None
+
+        self.layout = QVBoxLayout()
+        
+        self.dir_widget = _DirWidget()
+        self.dir_widget.updated.connect(self.update_dir_image)
+        #self.dir_widget.updated.connect(self.enable_ok)
+        self.layout.addWidget(self.dir_widget)
+
+        self.int_widget = _IntrinsicsWidget(self.dir_image)
+        self.int_widget.updated.connect(self.update_intrinsics)
+        self.int_widget.updated.connect(self.enable_ok)
+        self.layout.addWidget(self.int_widget)
+
+        self.ext_widget = _ExtrinsicsWidget(self.dir_image)
+        self.ext_widget.updated.connect(self.update_extrinsics)
+        self.ext_widget.updated.connect(self.enable_ok)
+        self.layout.addWidget(self.ext_widget)
+
+        self.thumb_widget = _ThumbnailsWidget()
+        self.thumb_widget.updated.connect(self.update_thumbnails)
+        self.layout.addWidget(self.thumb_widget)
+        
+        self.layout.addWidget(self.buttonBox)
+        self.setLayout(self.layout)
+    
+    def enable_ok(self):
+        boolean = self.calib.get("intrinsics") is not None and self.calib.get("extrinsics") is not None and self.dir_image is not None
+        print(f"Ok ? : {boolean}")
+
+        self.buttonBox.button(QDialogButtonBox.StandardButton.Ok).setEnabled(boolean)
+    
+    def update_dir_image(self, dir):
+        self.dir_image = dir
+
+    def update_intrinsics(self, intrinsics):
+        self.calib["intrinsics"] = intrinsics
+
+    def update_extrinsics(self, extrinsics):
+        self.calib["extrinsics"] = extrinsics
+
+    def update_thumbnails(self, thumb):
+        self.thumbnails_bool = thumb[0]
+        if self.thumbnails_bool:
+            self.calib["thumbnails"] : thumb[1]
+        else:
+            self.calib["thumbnails"] = "thumbnails"
+    
     def init_settings(self):
         self.settings = QSettings("Sphaeroptica", "reconstruction")    
