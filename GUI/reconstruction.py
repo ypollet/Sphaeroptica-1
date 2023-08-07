@@ -538,7 +538,7 @@ class Sphere3D(QWidget):
         self.update_points()
     
     def add_dot(self):
-        max_id = max(self.dots)+1
+        max_id = max(self.dots, default=(-1))+1
         self.dots[max_id] = helpers.Point3D(max_id, f'Point_{max_id}')
         self.update_points()
 
