@@ -666,13 +666,12 @@ class Sphere3D(QWidget):
         self._old_angles = (self._angles_sphere[0], self._angles_sphere[1])
 
     def set_picture(self, key: helpers.Keys):
-        self.commands[key.name] = self._angles_sphere
         self.calibration_dict["commands"][key.name] = self._angles_sphere
         with open(f"{self.directory}/{self.calibration_file}", "w") as f_to_write:
             json.dump(self.calibration_dict, f_to_write)
 
     def change_picture(self, key: helpers.Keys):
-        self._angles_sphere = self.commands[key.name]
+        self._angles_sphere = self.calibration_dict["commands"][key.name]
         self._sphere_values._trigger_refresh()
         self.next_image()
         self._old_angles = (self._angles_sphere[0], self._angles_sphere[1])
