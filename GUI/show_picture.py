@@ -16,6 +16,7 @@ class QImageLabel(QLabel):
     def __init__(self, image : QImage, base_factor : float, dots : dict(), point_scale : int):
         super().__init__()
         self.dots = dots
+        self.visible = {id:True for id in self.dots}
         self.point_scale = point_scale
         self.scaleFactor = base_factor
         self.image = QPixmap.fromImage(image)
@@ -25,8 +26,13 @@ class QImageLabel(QLabel):
     def set_scale_point(self, val):
         self.point_scale = val
         self.paint_dots()
+    
+    def set_visible_point(self, id, visible):
+        self.visible[id] = visible
 
-    def mousePressEvent(self, ev: QMouseEvent) -> None:  
+    def mousePressEvent(self, ev: QMouseEvent) -> None: 
+        if ev.buttons() & Qt.MouseButton.RightButton:
+            return
         pos = ev.pos()
         point = helpers.Point(float(pos.x()), float(pos.y()))
         self.dots[self.window().point]["dot"] = point.scaled(1/self.scaleFactor)
@@ -38,11 +44,12 @@ class QImageLabel(QLabel):
         pen = QPen()
         pen.setWidth(self.point_scale)
         print(self.dots)
-        for i in self.dots:
+        for i in self.dots:     
             pen.setColor(self.dots[i]['color'])
             painter.setPen(pen)
-
             if(self.dots[i]["dot"] is None):
+                if not self.visible[i]:
+                    continue
                 if self.dots[i]["position"] is not None:
                     point = self.dots[i]["position"].scaled(self.scaleFactor)
                     print(point)
@@ -113,11 +120,18 @@ class QPointButtons(QWidget):
         self.color = QColorPixmap(self.select_button.height(), color)
         layout.addWidget(self.color)
 
+        self.hide_button = QPointButton("hide", helpers.Action.HIDE)
+        self.hide_button.clicked.connect(self.btnListener)
+        self.hide_button.setFixedWidth(50)
+        layout.addWidget(self.hide_button)
+
         self.delete_button = QPointButton("x", helpers.Action.DELETE)
         self.delete_button.clicked.connect(self.btnListener)
         self.delete_button.setFixedWidth(20)
         layout.addWidget(self.delete_button)
+
         self.id = id
+        self.visible = True
         self.setLayout(layout)
 
     def setChecked(self, checked : bool):
@@ -126,11 +140,19 @@ class QPointButtons(QWidget):
     def btnListener(self):
         sender_button = self.sender()
         action = sender_button.action
+        if action == helpers.Action.HIDE:
+            self.visible = not self.visible
+            sender_button.setText("hide" if self.visible else "show")
+            print("It is visible ? ", self.visible)
+            print(sender_button.text())
         self.button_clicked.emit(action)
 
 
 class QPoints(QScrollArea):
     delete = pyqtSignal(object)
+    showed = pyqtSignal(object)
+    hidden = pyqtSignal(object)
+
     def __init__(self, points):
         super().__init__()
         self.w = QWidget()
@@ -156,7 +178,7 @@ class QPoints(QScrollArea):
             QSizePolicy.Policy.Expanding)
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.setWidget(self.w)
-        self.setMaximumWidth(200)
+        self.setMaximumWidth(250)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setWidgetResizable(True)
     
@@ -167,16 +189,26 @@ class QPoints(QScrollArea):
     
     def delete_point(self, id):
         self.delete.emit(id)
+    
+    def show_point(self, show, id):
+        if show:
+            self.showed.emit(id)
+        else:
+            self.hidden.emit(id)
 
     def btnListener(self, action):
         sender_button = self.sender()
         if action == helpers.Action.SELECT:
-            print(f"Check : {sender_button.id}")
             self.check(sender_button.id)
             self.window().point = sender_button.id
-        else:
+            return
+        
+        if action == helpers.Action.DELETE:
             print(f"Delete : {sender_button.id}")
             self.delete_point(sender_button.id)
+            return
+        self.show_point(sender_button.visible, sender_button.id)
+        
         
 
 class QScalePoint(QWidget):
@@ -269,6 +301,8 @@ class QImageViewer(QMainWindow):
 
         self.points = QPoints(dots)
         self.points.delete.connect(self.delete_point)
+        self.points.showed.connect(self.show_point)
+        self.points.hidden.connect(self.hide_point)
 
         self.side_bar.addWidget(self.scale_point)
         self.side_bar.addWidget(self.points)
@@ -283,8 +317,21 @@ class QImageViewer(QMainWindow):
     def changeScalePoint(self, val):
         self.image_label.set_scale_point(val)
 
+    def show_point(self, id):
+        print(f"show {id}")
+        self.image_label.set_visible_point(id, True)
+        self.image_label.paint_dots()
+
+    def hide_point(self, id):
+        print(f"hide {id}")
+        self.image_label.set_visible_point(id, False)
+        self.image_label.paint_dots()
+
     def delete_point(self, id):
         self.image_label.dots[id]["dot"] = None
+        self.image_label.paint_dots()
+    
+    def update(self):
         self.image_label.paint_dots()
 
     def switchPoint(self, i : int):

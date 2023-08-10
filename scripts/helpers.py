@@ -24,6 +24,7 @@ class Scale(Enum):
 class Action(Enum):
     SELECT = 0
     DELETE = 1
+    HIDE = 2
 
 
 class Arrows(Enum):

@@ -427,6 +427,7 @@ class Sphere3D(QWidget):
         self.setContentsMargins(0,0,0,0)
     
     def load(self, calibration):
+        self.images = {}
         self.directory = calibration.absolutePath()
         self.calibration_file = calibration.fileName()
         self.current_image = None
@@ -574,7 +575,6 @@ class Sphere3D(QWidget):
 
         pixmap = QPixmap.fromImage(qImg)'''
         pixmap = QPixmap(f'{self.directory}/{self.thumbnails}/{self.current_image}')
-
         pixmap = pixmap.scaled(self.sphere.height(), self.sphere.width(), Qt.AspectRatioMode.KeepAspectRatio)
         self.sphere.setPixmap(pixmap)
 
