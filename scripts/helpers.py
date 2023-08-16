@@ -102,7 +102,8 @@ class Point3D():
     def __str__(self) -> str:
         string = f"{self.label} : {self.position}\n"
         for x in self.dots:
-            string += f"{x} : {self.dots[x]}\n"
+            if self.dots[x] is not None:
+                string += f"{x} : {self.dots[x]}\n"
         return string
 
 class Point():

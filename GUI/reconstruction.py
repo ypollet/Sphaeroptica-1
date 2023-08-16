@@ -7,6 +7,7 @@ import glob
 from PyQt6 import QtGui
 import numpy as np
 import cv2 as cv
+import pandas as pd
 import os
 import json
 from PIL import Image
@@ -276,6 +277,7 @@ class CommandsWidget(QWidget):
     delete_dot = pyqtSignal(object)
     label_changed = pyqtSignal(object)
     color_changed = pyqtSignal(object)
+    export = pyqtSignal()
 
     def __init__(self, parent):
         super(QWidget, self).__init__(parent)
@@ -331,6 +333,12 @@ class CommandsWidget(QWidget):
         self.distance_calculator = DistanceWidget(self)
         self.v_layout.addWidget(self.distance_calculator)
 
+        # Export Button
+        self.export_button = QPushButton("Export")
+        self.export_button.clicked.connect(self.to_export)
+        self.v_layout.addWidget(self.export_button)
+
+
         self.v_layout.setAlignment(Qt.AlignmentFlag.AlignRight)
         self.setLayout(self.v_layout)
 
@@ -352,6 +360,9 @@ class CommandsWidget(QWidget):
     
     def change_color(self, id_and_color):
         self.color_changed.emit(id_and_color)
+    
+    def to_export(self):
+        self.export.emit()
 
     def mousePressEvent(self, a0: QMouseEvent) -> None:
         print("Commands Pressed")
@@ -411,6 +422,7 @@ class Sphere3D(QWidget):
         self.commands_widget.label_changed.connect(self.change_label)
         self.commands_widget.color_changed.connect(self.change_color)
         self.commands_widget.dot_added.connect(self.add_dot)
+        self.commands_widget.export.connect(self.export)
 
         self.commands_widget.setSizePolicy(QSizePolicy.Policy.Maximum,QSizePolicy.Policy.Minimum)
         self.commands_widget.setContentsMargins(0,0,0,0)
@@ -701,6 +713,31 @@ class Sphere3D(QWidget):
             self.sphere.setPixmap(pixmap)
         except:
             pass
+
+    def export(self):
+        print("export")
+        df = pd.DataFrame(columns=["Color", "X", "Y", "Z"])
+        df.rename_axis("Label")
+        centroid_x = []
+        centroid_y = []
+        centroid_z = []
+        print(type(self.dots))
+        for key, dot in self.dots.items():
+            print(f"{key} : {dot}")
+            pos = dot.get_position() if dot.get_position() is not None else [None, None, None]
+            df.loc[dot.get_label()] = [dot.get_color().name(), pos[0], pos[1], pos[2]]
+            if dot.get_position() is not None :
+                centroid_x.append(pos[0])
+                centroid_y.append(pos[1])
+                centroid_z.append(pos[2])
+        if len(centroid_x) > 0:
+            df.loc["centroid"] = ["#000000", sum(centroid_x)/len(centroid_x), sum(centroid_y)/len(centroid_y), sum(centroid_z)/len(centroid_z)]
+        print(df)
+        export_file_name = QFileDialog.getSaveFileName(self, "Save File", self.directory+"/.csv","CSV (*.csv *.txt)")[0]
+        print(export_file_name)
+        if len(export_file_name.strip()) != 0:
+            print("hallo")
+            df.to_csv(export_file_name, index=True, index_label="Label", sep="\t")
 
 
     def values_clicked(self) -> None:
