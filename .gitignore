@@ -1,6 +1,5 @@
 test_3d_points.py
 to_send.py
-export_cameras.py
 extrinsics.json
 extrinsics_structured.csv
 extrinsics_structured_zhang.csv
