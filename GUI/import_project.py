@@ -50,9 +50,9 @@ class _IntrinsicsWidget(QWidget):
         label = QLabel("Intrinsics : ")
         get_dir.addWidget(label)
 
-        self.extrinsics_edit= QLineEdit(self) 
-        self.extrinsics_edit.setFixedWidth(500)
-        get_dir.addWidget(self.extrinsics_edit)
+        self.intrinsics_edit= QLineEdit(self) 
+        self.intrinsics_edit.setFixedWidth(500)
+        get_dir.addWidget(self.intrinsics_edit)
         
         cam_calib = QPushButton(text="Browse...",parent=self)
         cam_calib.clicked.connect(self.open_file)
@@ -65,14 +65,14 @@ class _IntrinsicsWidget(QWidget):
 
     def open_file(self):
         intrinsics_val = QFileDialog.getOpenFileName(self, "Select intrinsics : ", self.path, "XML Files (*.xml)")
-        self.extrinsics_edit.setText(intrinsics_val[0])
+        self.intrinsics_edit.setText(intrinsics_val[0])
         intrinsics = self.get_intrinsics_values(intrinsics_val[0])
         print(intrinsics)
         self.updated.emit(intrinsics)
 
     def get_intrinsics_values(self, path):
         data = None
-        with open('data/geonemus-geoffroyii/export_intrinsics.xml', 'r') as f:
+        with open(path, 'r') as f:
             data = f.read()
         Bs_data = BeautifulSoup(data, "xml")
 
@@ -108,7 +108,7 @@ class _IntrinsicsWidget(QWidget):
         
     
     def get_value(self):
-        return str(self.extrinsics_edit.text())
+        return str(self.intrinsics_edit.text())
     
     def set_path_image(self, path):
          self.path = path
