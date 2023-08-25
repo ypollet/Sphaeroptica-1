@@ -1,13 +1,14 @@
 import json
 import pandas as pd
 import numpy as np
+import os
 import math
 
 from scipy.spatial.transform import Rotation as R
 
 from scripts import helpers, reconstruction
  
-file_path = '/home/broot/cameras.txt'
+file_path = '~/lyssandra_bellargus/cameras.txt'
 
 df = pd.read_csv(file_path, sep='\t', header=None, names=["Label","X","Y","Z","Omega","Phi","Kappa","r11","r12","r13","r21","r22","r23","r31","r32","r33"])
 
@@ -72,5 +73,7 @@ for index, row in df.iterrows():
     
     extrinsics[f'{row["Label"]}.jpg'] = {"matrix" : ext_mat.tolist()}
 
-with open('/home/broot/ext.json', "w") as file:
+file_path = os.path.expanduser('~')+'/lyssandra_bellargus/lys_ext.json'
+
+with open(file_path, "w") as file:
     json.dump(extrinsics,file)

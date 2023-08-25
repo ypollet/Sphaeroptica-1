@@ -3,11 +3,12 @@ from mpl_toolkits.mplot3d import Axes3D
 import json
 import numpy as np
 from scripts import helpers
+import os
 
-#extrinsic_file = open("/home/ypollet/Numerisation/Sphaeroptica/lysandra_bellargus/jpegs/ext.json")
-#extrinsic_file = open("/home/ypollet/Numerisation/Sphaeroptica/Sphaeroptica/data/geonemus-geoffroyii/extrinsics.json")
-#extrinsic_file = open("/home/ypollet/Numerisation/Sphaeroptica/lysandra_bellargus/extrinsics.json")
-extrinsic_file = open("/home/ypollet/lys_median/ext.json")
+#extrinsic_file = open(f"{os.path.expanduser('~')}/Numerisation/Sphaeroptica/lysandra_bellargus/jpegs/ext.json")
+#extrinsic_file = open(f"{os.path.expanduser('~')}/Numerisation/Sphaeroptica/Sphaeroptica/data/geonemus-geoffroyii/extrinsics.json")
+#extrinsic_file = open(f"{os.path.expanduser('~')}/Numerisation/Sphaeroptica/lysandra_bellargus/extrinsics.json")
+extrinsic_file = open(f"{os.path.expanduser('~')}/lys_median/ext.json")
 
 extrinsics = json.load(extrinsic_file)
 
