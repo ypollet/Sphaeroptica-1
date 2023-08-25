@@ -7,12 +7,13 @@ from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import json
 import numpy as np
-from scripts import helpers, reconstruction
+from scripts import helpers
+import os
 
-#extrinsic_file = open("/home/ypollet/Numerisation/Sphaeroptica/lysandra_bellargus/jpegs/ext.json")
-#extrinsic_file = open("/home/ypollet/Numerisation/Sphaeroptica/Sphaeroptica/data/geonemus-geoffroyii/extrinsics.json")
-#extrinsic_file = open("/home/ypollet/Numerisation/Sphaeroptica/lysandra_bellargus/extrinsics.json")
-calib_file = open("/home/psadmin/scAnt/calib_stacked/calibration_intrinsics.json")
+#extrinsic_file = open(f"{os.path.expanduser('~')}/Numerisation/Sphaeroptica/lysandra_bellargus/jpegs/ext.json")
+#extrinsic_file = open(f"{os.path.expanduser('~')}/Numerisation/Sphaeroptica/Sphaeroptica/data/geonemus-geoffroyii/extrinsics.json")
+#extrinsic_file = open(f"{os.path.expanduser('~')}/Numerisation/Sphaeroptica/lysandra_bellargus/extrinsics.json")
+calib_file = open(f"{os.path.expanduser('~')}/lys_median/ext.json")
 
 calib = json.load(calib_file)
 intrinsics = np.matrix(calib["intrinsics"]["camera matrix"]["matrix"])
