@@ -777,6 +777,7 @@ class Sphere3D(QWidget):
 
         dots = {k:dot.to_tuple(self.current_image, intrinsics, extrinsics, distCoeffs) for k, dot in self.dots.items()}
         self.win = show_picture.QImageViewer(f'{self.directory}/{self.current_image}', dots)
+        self.win.setWindowModality(Qt.WindowModality.ApplicationModal)
         self.win.show()
         self.win.closeSignal.connect(self.get_dots)
     
