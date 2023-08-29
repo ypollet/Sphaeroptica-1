@@ -23,7 +23,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtGui import (
     QPixmap, QResizeEvent, QMouseEvent, QImage, QPalette,
     QPaintEvent, QPainter, QBrush, QColor, QKeyEvent, QDoubleValidator)
-from PyQt6.QtCore import Qt, QRect, pyqtSignal, QSettings, QFileInfo, QEvent
+from PyQt6.QtCore import Qt, QRect, pyqtSignal, QSettings, QFileInfo, QEvent, QLocale
 
 
 class _AngleValues(QWidget):
@@ -111,7 +111,7 @@ class QPointEntry(QWidget):
         self.label = QLineEdit(self)
         self.label.setFixedHeight(helpers.HEIGHT_COMPONENT)
         self.label.setText(point.label)
-        self.label.returnPressed.connect(self.change_label)
+        self.label.editingFinished.connect(self.change_label)
         layout.addWidget(self.label)
 
         self.color_label = QColorPixmap(self.label.height(), point.get_color())
@@ -212,6 +212,13 @@ class DistanceWidget(QWidget):
         self.right = QComboBox()
         self.left.addItem("",0)
         self.right.addItem("",0)
+
+        self.reset_layout = QHBoxLayout()
+        self.reset_layout.setAlignment(Qt.AlignmentFlag.AlignRight)
+        self.reset_button = QPushButton("Reset Factor")
+        self.reset_button.clicked.connect(self.reset_scale_factor)
+        self.reset_layout.addWidget(self.reset_button)
+        self.full_layout.addLayout(self.reset_layout)
         
         self.load_points(self.window().dots)
         self.selection.addWidget(self.left)
@@ -225,8 +232,14 @@ class DistanceWidget(QWidget):
         self.value = QLineEdit()
         self.validator = QDoubleValidator()
         self.validator.setBottom(0)
+        self.validator.setLocale(QLocale(QLocale.Language.English, QLocale.Country.UnitedStates))
+        self.validator.setNotation(QDoubleValidator.Notation.StandardNotation)
         self.value.setValidator(self.validator)
         self.distance.addWidget(self.value)
+
+        self.scale_factor = 1.0
+        self.original_value = 0.0
+        self.value.editingFinished.connect(self.update_scale)
 
         #wait init of all widgets to add the QCombobox listener
         self.left.currentIndexChanged.connect(self.update_dist)
@@ -237,6 +250,21 @@ class DistanceWidget(QWidget):
 
         self.setLayout(self.full_layout)
     
+    def update_scale(self):
+        if self.original_value == 0.0:
+            self.value.setText("0.0")
+            print("Impossible to update scale from a nul value")
+            return
+        # There is already a double validator on the QLineEdit
+        value = float(self.value.text())
+        self.scale_factor = value / self.original_value
+        self.value.setCursorPosition(0)
+        print(self.scale_factor)
+    
+    def reset_scale_factor(self):
+        self.scale_factor = 1.0
+        self.update_dist()
+
     def load_points(self, points):
         self.points = {}
         left_index = self.left.currentIndex()
@@ -269,8 +297,11 @@ class DistanceWidget(QWidget):
     def update_dist(self):
         if self.left.currentIndex() <= 0 or self.right.currentIndex() <= 0:
             self.value.setText("0.0")
+            self.original_value = 0.0
             return
-        self.value.setText(str(reconstruction.get_distance(self.points[self.left.currentData()].get_position(), self.points[self.right.currentData()].get_position())))
+        self.original_value = reconstruction.get_distance(self.points[self.left.currentData()].get_position(), self.points[self.right.currentData()].get_position())
+        self.value.setText(str(self.original_value * self.scale_factor))
+        self.value.setCursorPosition(0)
 
 class CommandsWidget(QWidget):
     dot_added = pyqtSignal()
@@ -529,9 +560,7 @@ class Sphere3D(QWidget):
         self.current_image = self.next_image()
 
         #init dots again
-        self.dots[0] = helpers.Point3D(0, 'Front', QColor('blue'))
-        self.dots[1] = helpers.Point3D(1, 'Middle', QColor('red'))
-        self.dots[2] = helpers.Point3D(2, 'Back', QColor('green'))
+        self.dots[0] = helpers.Point3D(0, 'Point_0', QColor('blue'))
 
     def delete_dot(self, id):
         self.dots.pop(id)
