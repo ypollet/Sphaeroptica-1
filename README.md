@@ -11,7 +11,13 @@ Here is the list of the requirements needed to run Sphaeropica :
 * scipy
 * pyqt 6
 * imutils
-* opencv-contrib-python
+* opencv-python
+* matplotlib
+
+Make sure that only opencv-python is installed, installing other opencv packages can create some bugs
+
+You can install these requirements with :
+```pip3 install -r requirements.txt```
 
 ## Quick Start Guide
 
@@ -59,7 +65,33 @@ Click on values under to display the nearest image to be able to place landmark 
 
 Place landmarks on the points that you can see on the image.
 
-When two or more landmarks have been placed for the same point, Sphaeroptica will start a triangulation process to compute the 3D coordinates of this point.
+When two or more landmarks have been placed for the same point, Sphaeroptica will start compute the 3D coordinates of this point thanks to a triangulation of these landmarks placed.
+
+### Additional scripts
+
+We added multiple scripts to make the conversion easier between data from the software Agisoft Metashape and Sphaeroptica.
+
+#### Show extrinsics
+Plots the extrinsics parameter of cameras. These parameters should be contained in a JSON File.
+
+* Input -i : Path of JSON File containing the extrinsics
+```python3 scripts/additional/show_extrinsics.py -i ./data/```
+
+#### Create camera reference CSV for Agisoft Metashape
+Creates a CSV File that contains the estimated world coordinates of each camera, this file will be used as an import in Metashape.
+
+* Input -i : Path of JSON File containing the calibration parameters of the cameras where a chess pattern was recognized.
+* Dataframe -d : CSV of old import reference file to get all the image name and old positions
+* Output -o : Path of CSV file that will contain the camera references
+```python3 scripts/additional/create_csv_for_metashape.py -i ../images/calib_stacked/calibration_intrinsics.json -d ./new_import_camera_stacked_old.csv -o ./new_import_camera_stacked.csv```
+
+
+#### Create extrinsics file for Sphaeroptica
+Creates a JSON file that will contain the extrinsics parameters of the cameras
+
+* Input -i : Path of the CSV File containing the OPK values for each cameras
+* Output -o : Path of JSON file that will contain the camera parameters
+```python3 scripts/additional/import_cameras_to_sphaeroptica.py -i data/geonemus-geoffroyii/export_csv.txt -o data/geonemus-geoffroyii/ext.json```
 
 ## Credits
 

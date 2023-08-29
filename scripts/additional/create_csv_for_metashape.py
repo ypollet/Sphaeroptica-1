@@ -72,7 +72,7 @@ if __name__ == '__main__':
 
     new_df = pd.DataFrame(columns=["Label", "X", "Y", "Z"])
 
-    '''# Stacked images loop
+    # Stacked images loop
     for index, row in df.iterrows():
         print(index)
         split = row['Label'].split('.')
@@ -93,6 +93,7 @@ if __name__ == '__main__':
             new_df = pd.concat([new_df, pd.DataFrame({"Label":f"{split[0][:-6]}0{step}_.jpg", "X":C_new_dist.item(0), "Y":C_new_dist.item(1), "Z":C_new_dist.item(2)}, index=[index])])
             print(reconstruction.get_distance(center, C_new_dist))
             step -= 250
+    '''
     
     print(new_df)
 
