@@ -75,6 +75,7 @@ We added multiple scripts to make the conversion easier between data from the so
 Plots the extrinsics parameter of cameras. These parameters should be contained in a JSON File.
 
 * Input -i : Path of JSON File containing the extrinsics
+
 ```python3 scripts/additional/show_extrinsics.py -i ./data/```
 
 #### Create camera reference CSV for Agisoft Metashape
@@ -83,6 +84,7 @@ Creates a CSV File that contains the estimated world coordinates of each camera,
 * Input -i : Path of JSON File containing the calibration parameters of the cameras where a chess pattern was recognized.
 * Dataframe -d : CSV of old import reference file to get all the image name and old positions
 * Output -o : Path of CSV file that will contain the camera references
+
 ```python3 scripts/additional/create_csv_for_metashape.py -i ../images/calib_stacked/calibration_intrinsics.json -d ./new_import_camera_stacked_old.csv -o ./new_import_camera_stacked.csv```
 
 
@@ -91,6 +93,7 @@ Creates a JSON file that will contain the extrinsics parameters of the cameras
 
 * Input -i : Path of the CSV File containing the OPK values for each cameras
 * Output -o : Path of JSON file that will contain the camera parameters
+
 ```python3 scripts/additional/import_cameras_to_sphaeroptica.py -i data/geonemus-geoffroyii/export_csv.txt -o data/geonemus-geoffroyii/ext.json```
 
 ## Credits
