@@ -480,7 +480,7 @@ class Sphere3D(QWidget):
             self.thumbnails = self.calibration_dict["thumbnails"]
             images_thumbnails = glob.glob(f'{self.directory}/{self.thumbnails}/*')
         image_calibration = {}
-        self.center = np.matrix([0,0,0]).T
+        self.center_avg = np.matrix([0.0,0.0,0.0]).T
         intrinsics = np.matrix(self.calibration_dict["intrinsics"]["camera matrix"]["matrix"])
         distCoeffs = np.matrix(self.calibration_dict["intrinsics"]["distortion matrix"]["matrix"])
 
@@ -511,9 +511,11 @@ class Sphere3D(QWidget):
 
             image_calibration[file_name] = C
 
-            self.center = self.center + C
+            self.center_avg += C
         point.set_position(self.estimate_position(point))
         print(point)
+        self.center_avg = self.center_avg/len(image_sorted)
+        print(f"Center AVG = {self.center_avg}")
         self.center = np.matrix(point.get_position()[:3]).T
 
         print(f"Center = {self.center}")
@@ -540,7 +542,7 @@ class Sphere3D(QWidget):
             # add long, lat to key
             C = image_calibration[file_name]
             vec = C - self.center
-            print(f'{file_name} : {reconstruction.get_distance(C, self.center)}')
+            print(f'{file_name} : {reconstruction.get_distance(C, self.center)} vs {reconstruction.get_distance(C, self.center_avg)}')
             longitude, latitude = helpers.get_long_lat(vec)
             key = (longitude, latitude) 
             lat_deg = int(helpers.rad2degrees(latitude))+1

@@ -98,6 +98,5 @@ if __name__ == '__main__':
         output_path = Path(args["output"])
 
 
-
     with open(output_path, "w") as file:
         json.dump(extrinsics,file)

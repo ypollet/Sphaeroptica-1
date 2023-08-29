@@ -50,7 +50,8 @@ if __name__ == '__main__':
         proj_points.append(proj_point)
 
     center = reconstruction.triangulate_point(proj_points)[:3]
-    print(center)
+    print(f'{center}')
+    
 
     dist = 0
     i = 0
