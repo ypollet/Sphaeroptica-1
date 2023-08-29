@@ -1,10 +1,17 @@
+import sys
+import os
+ 
+# setting path
+print(__file__)
+sys.path.append(os.path.realpath(f"{__file__}/../.."))
+
 import json
 import numpy as np
 import pandas as pd
 
 from scripts import helpers, reconstruction
 
-file_path = "calibrate_mm.json"
+file_path = "/home/psadmin/scAnt/calib_stacked/calibration_intrinsics.json"
 
 calib_dict = {}
 
@@ -46,18 +53,18 @@ for image in extrinsics:
 avg_dist = dist/i
 print("avg dist = ", avg_dist)
 
-df = pd.read_csv("./csv_import.csv", sep="\t")
+df = pd.read_csv("./new_import_camera_stacked_old.csv", sep="\t")
 
 new_df = pd.DataFrame(columns=["Label", "X", "Y", "Z"])
 
 for index, row in df.iterrows():
     print(index)
     split = row['Label'].split('.')
-    print(split[0][:-11])
+    print(split[0])
     trans_w = np.array([row["X"], row["Y"], row["Z"]])
     C_new_dist = avg_dist * (trans_w / np.linalg.norm(trans_w))
     trans_w = np.array([row["X"], row["Y"], row["Z"]])
-    new_df = pd.concat([new_df, pd.DataFrame({"Label":f"{split[0][:-11]}.jpg",  "X":C_new_dist.item(0), "Y":C_new_dist.item(1), "Z":C_new_dist.item(2)}, index=[index])])
+    new_df = pd.concat([new_df, pd.DataFrame({"Label":row['Label'],  "X":C_new_dist.item(0), "Y":C_new_dist.item(1), "Z":C_new_dist.item(2)}, index=[index])])
 
 ''' Steps
 for index, row in df.iterrows():
