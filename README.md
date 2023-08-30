@@ -16,6 +16,9 @@ Here is the list of the requirements needed to run Sphaeropica :
 
 Make sure that only opencv-python is installed, installing other opencv packages can create some bugs
 
+If OpenCV and Pyqt6 show an error, uninstall opencv-python and use this command to install it :
+```pip3 install --no-binary opencv-python opencv-python```
+
 You can install these requirements with :
 ```pip3 install -r requirements.txt```
 
@@ -94,7 +97,76 @@ Creates a JSON file that will contain the extrinsics parameters of the cameras
 * Input -i : Path of the CSV File containing the OPK values for each cameras
 * Output -o : Path of JSON file that will contain the camera parameters
 
-```python3 scripts/additional/import_cameras_to_sphaeroptica.py -i data/geonemus-geoffroyii/export_csv.txt -o data/geonemus-geoffroyii/ext.json```
+```python3 scripts/additional/import_cameras_to_sphaeroptica.py -i ../images/lyssandra_bellargus_stacked/cameras.txt -o ../images/lyssandra_bellargus_stacked/ext.json```
+
+```python3 scripts/additional/import_cameras_to_sphaeroptica.py -i ../images/IMAGE_DIRECTORY/CAMERAS_POSITIONS_OPK.txt -o ../images/IMAGE_DIRECTORY/EXTRINSICS_OUTPUT.json```
+
+## Processus of digitization with scAnt and Agisoft Metashape
+
+### Image acquisition and stacking with scAnt
+
+Open a terminal and change the current directory to the directory of scAnt : 
+```cd ~/PATH_TO_SCANT```
+
+Start the application : ```python3 scAnt.py```
+
+On the following image, there are 2 groups of parameters that are important for the scan : 
+* Camera Settings : The different parameters on how the camera will take the images
+* Stepper Control : the different parameters for the motors
+
+
+![Screen of the scAnt GUI](./images/scAnt_GUI.png)
+
+In Scanner Setup, do not check the "Stack images" box as it will not work properly. The stacking process has to be done separately.
+
+To do the stacking process, run the following command : ```python3 scripts/focus_stacking_MP.py -i NAME_OF_PROJECT/RAW```.
+
+All the stacked images will be saved in the directory RAW_stacked.
+
+### Camera calibration with Agisoft Metashape
+
+Now that we have the pictures, we need to align them.  
+Start Agisoft Metashape and do the following sequence :
+1. Add the photos to the project
+2. Add camera references with a csv file (optional)
+3. Align photos as precisely as you can
+4. Save the intrinsic parameters of the camera (Tools -> Camera Calibration -> in the adjusted tab) as an OPENCV Camera Calibration file (.xml) (to make it easier, save it in the same directory as the pictures)
+5. Save the extrinsics parameters of the cameras (File -> Export -> Export Cameras) as an Omega-Phi-Kappa file (.txt) (as for the intrinsic parameters, save it in the same directory)
+
+### View with Sphaeroptica
+
+Now that we have the camera parameters from Agisoft Metashape we can view our object.  
+
+Firstly, move to the directory that contains Sphaeroptica : 
+```cd ~/PATH_TO_SPHAEROPTICA```
+
+Before viewing the object, we have to convert the OPK File (the file that contains the extrinsics parameter) to a json file that Sphaeroptica will understand. 
+
+Run the following command to create that file : ```python3 scripts/additional/import_cameras_to_sphaeroptica.py -i ../images/IMAGE_DIRECTORY/CAMERAS_POSITIONS_OPK.txt -o ../images/IMAGE_DIRECTORY/EXTRINSICS_OUTPUT.json``` 
+
+Start Sphaeroptica : ```python3 app.py```
+
+Create a new project by :
+1. Selecting the directory that contains all the images
+2. Selecting the XML that contains the intrinsic parameters
+3. Selecting the JSON file that contains the extrinsic parameters
+4. Selecting the directory that contains the thumbnails (optional, if it isn't selected, Sphaeroptica will create it itself)
+5. Saving the resulted JSON file in the image directory (this will be the file that will be used by Sphaeroptica)
+
+![Screen of the creation of a new project](./images/new_file.png)
+
+At the end the directory structure for one project should look like something like this :
+```bash  
+├── calibration.json (project viewer file)
+├── export_csv.txt (optional)
+├── export_intrinsics.xml (optional)
+├── ext.json (optional)
+├── thumbnails
+│   ├── *.jpg
+│   ├── ...
+├── *.jpg
+├── ...
+```
 
 ## Credits
 
