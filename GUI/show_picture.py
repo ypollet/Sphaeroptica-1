@@ -43,7 +43,6 @@ class QImageLabel(QLabel):
         painter = QPainter(canvas)
         pen = QPen()
         pen.setWidth(self.point_scale)
-        print(self.dots)
         for i in self.dots:     
             pen.setColor(self.dots[i]['color'])
             painter.setPen(pen)
@@ -52,11 +51,9 @@ class QImageLabel(QLabel):
                     continue
                 if self.dots[i]["position"] is not None:
                     point = self.dots[i]["position"].scaled(self.scaleFactor)
-                    print(point)
                     painter.drawArc(QRectF(point.x, point.y,float(self.point_scale)/3,float(self.point_scale)/3), 0, 16*360)
                 continue
             point = self.dots[i]["dot"].scaled(self.scaleFactor)
-            print(point)
             painter.drawPoint(int(point.x), int(point.y))
 
         painter.end()
@@ -116,7 +113,6 @@ class QPointButtons(QWidget):
         self.select_button.clicked.connect(self.btnListener)
         layout.addWidget(self.select_button)
 
-        print(self.select_button.height())
         self.color = QColorPixmap(self.select_button.height(), color)
         layout.addWidget(self.color)
 
@@ -157,13 +153,12 @@ class QPoints(QScrollArea):
         super().__init__()
         self.w = QWidget()
         self.vbox = QVBoxLayout()  
+        self.vbox.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.buttons = []
-        print(points)
         sorted_points_k = sorted(points)
         self.indexes = {}
         index = 0
         for i in sorted_points_k:
-            print(points[i]["label"])
             button = QPointButtons(points[i]["label"], points[i]["color"],i)
             self.buttons.append(button)
             button.button_clicked.connect(self.btnListener)
@@ -318,12 +313,10 @@ class QImageViewer(QMainWindow):
         self.image_label.set_scale_point(val)
 
     def show_point(self, id):
-        print(f"show {id}")
         self.image_label.set_visible_point(id, True)
         self.image_label.paint_dots()
 
     def hide_point(self, id):
-        print(f"hide {id}")
         self.image_label.set_visible_point(id, False)
         self.image_label.paint_dots()
 

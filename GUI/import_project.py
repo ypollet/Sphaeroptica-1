@@ -67,7 +67,6 @@ class _IntrinsicsWidget(QWidget):
         intrinsics_val = QFileDialog.getOpenFileName(self, "Select intrinsics : ", self.path, "XML Files (*.xml)")
         self.intrinsics_edit.setText(intrinsics_val[0])
         intrinsics = self.get_intrinsics_values(intrinsics_val[0])
-        print(intrinsics)
         self.updated.emit(intrinsics)
 
     def get_intrinsics_values(self, path):
@@ -261,7 +260,6 @@ class QImportProject(QDialog):
     
     def enable_ok(self):
         boolean = self.calib.get("intrinsics") is not None and self.calib.get("extrinsics") is not None and self.dir_image is not None
-        print(f"Ok ? : {boolean}")
 
         self.buttonBox.button(QDialogButtonBox.StandardButton.Ok).setEnabled(boolean)
     
