@@ -221,7 +221,6 @@ class CalibrationWidget(QWidget):
         
     def on_calibrate(self):
         dir_name = self.get_dir.get_value()
-        print(dir_name)
         dimensions, length, width, scale = self.dim_check.get_values()
 
         self.camera_calibration_settings.setValue("directory", dir_name)
@@ -261,8 +260,6 @@ class CalibrationWidget(QWidget):
             },
             "extrinsics":self.extrinsics
         }
-        print(file_name)
         with open(file_name[0], 'w', encoding='utf-8') as f:
             json.dump(json_dict, f, ensure_ascii=False, indent=4)
 
-        print(json_dict)

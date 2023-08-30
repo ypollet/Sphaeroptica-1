@@ -117,6 +117,9 @@ On the following image, there are 2 groups of parameters that are important for 
 
 ![Screen of the scAnt GUI](./images/scAnt_GUI.png)
 
+Test the capture of the image with the button "Capture Image" just to make sure that there aren't any problem prior to the scan.  
+If the image captured is in black and white, close scAnt, open the SpinView application and make sure that in Image_format_control -> Pixel Format is set at "BGR8" and not "BayerRG8"
+
 In Scanner Setup, do not check the "Stack images" box as it will not work properly. The stacking process has to be done separately.
 
 To do the stacking process, run the following command : ```python3 scripts/focus_stacking_MP.py -i NAME_OF_PROJECT/RAW```.
