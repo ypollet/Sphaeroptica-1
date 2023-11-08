@@ -15,10 +15,10 @@ from PyQt6.QtGui import (
 from PyQt6.QtCore import (
     QSettings, Qt, pyqtSignal
 )
-from reconstruction import ReconstructionWidget
-from home import HomeWidget
+from GUI.reconstruction import ReconstructionWidget
+from GUI.home import HomeWidget
 from scripts.helpers import Indexes
-from calibration import CalibrationWidget
+from GUI.calibration import CalibrationWidget
 
 class MainWindow(QMainWindow):
 

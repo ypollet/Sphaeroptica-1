@@ -95,7 +95,6 @@ class QColorPixmap(QLabel):
     def mousePressEvent(self, ev: QMouseEvent) -> None:
         color = self.color_dialog.getColor(self.color)
         if color.isValid():
-            print(color.name())
             self.color_changed.emit(color)
 
 
@@ -168,7 +167,7 @@ class QPoints(QScrollArea):
 
     def load_points(self, points):
         self.w = QWidget()
-        self.vbox = QVBoxLayout()  
+        self.vbox = QVBoxLayout()
         self.buttons = []
         sorted_points_k = sorted(points)
         for i in sorted_points_k:
@@ -259,10 +258,11 @@ class DistanceWidget(QWidget):
         value = float(self.value.text())
         self.scale_factor = value / self.original_value
         self.value.setCursorPosition(0)
-        print(self.scale_factor)
+        print(f"Scale factor set at {self.scale_factor}")
     
     def reset_scale_factor(self):
         self.scale_factor = 1.0
+        print("Scale factor reset")
         self.update_dist()
 
     def load_points(self, points):
@@ -350,9 +350,9 @@ class CommandsWidget(QWidget):
 
         # List of Points
         self.points = QPoints(self)
-        self.points.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.points.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.v_layout.addWidget(self.points)
-        self.v_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.v_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         self.points.delete_dot.connect(self.delete_point)
         self.points.label_changed.connect(self.change_label)
@@ -395,9 +395,6 @@ class CommandsWidget(QWidget):
     def to_export(self):
         self.export.emit()
 
-    def mousePressEvent(self, a0: QMouseEvent) -> None:
-        print("Commands Pressed")
-
 class Sphere3D(QWidget):
     def __init__(self, calibration : QFileInfo):
         super(QWidget, self).__init__()
@@ -408,9 +405,7 @@ class Sphere3D(QWidget):
 
         # Point3D.id -> Point3D
         self.dots = dict()
-        self.dots[0] = helpers.Point3D(0, 'Front', QColor('blue'))#, position=(0.010782485813073936, 0.00032211282041287505, 0.03141674225785502, 1.0)) , position=(0.0,0.0,0.0,1.0)
-        self.dots[1] = helpers.Point3D(1, 'Middle', QColor('red'))#, position=(0.00503536251302613, 0.0007932051327948597, 0.03249463969616948, 1.0))
-        self.dots[2] = helpers.Point3D(2, 'Back', QColor('green'))#, position=(-0.012919467433220783, 0.0035218895786182747, 0.024576051668865468, 1.0))
+        self.dots[0] = helpers.Point3D(0, 'Point_0', QColor('blue'))#, position=(0.010782485813073936, 0.00032211282041287505, 0.03141674225785502, 1.0)) , position=(0.0,0.0,0.0,1.0)
 
         self.counter = 0
 
@@ -480,7 +475,6 @@ class Sphere3D(QWidget):
             self.thumbnails = self.calibration_dict["thumbnails"]
             images_thumbnails = glob.glob(f'{self.directory}/{self.thumbnails}/*')
         image_calibration = {}
-        self.center = np.matrix([0,0,0]).T
         intrinsics = np.matrix(self.calibration_dict["intrinsics"]["camera matrix"]["matrix"])
         distCoeffs = np.matrix(self.calibration_dict["intrinsics"]["distortion matrix"]["matrix"])
 
@@ -497,7 +491,6 @@ class Sphere3D(QWidget):
         cx, cy = intrinsics.item(0,2), intrinsics.item(1,2)
         image_sorted = sorted(images_thumbnails)
         point = helpers.Point3D(-1, "center")
-        print(len(image_sorted))
         for path in image_sorted:
             file_name = os.path.basename(path)
             if file_name not in self.calibration_dict["extrinsics"]:
@@ -511,9 +504,7 @@ class Sphere3D(QWidget):
 
             image_calibration[file_name] = C
 
-            self.center = self.center + C
         point.set_position(self.estimate_position(point))
-        print(point)
         self.center = np.matrix(point.get_position()[:3]).T
 
         print(f"Center = {self.center}")
@@ -540,7 +531,6 @@ class Sphere3D(QWidget):
             # add long, lat to key
             C = image_calibration[file_name]
             vec = C - self.center
-            print(f'{file_name} : {reconstruction.get_distance(C, self.center)}')
             longitude, latitude = helpers.get_long_lat(vec)
             key = (longitude, latitude) 
             lat_deg = int(helpers.rad2degrees(latitude))+1
@@ -551,7 +541,6 @@ class Sphere3D(QWidget):
             self.images[key] = file_name
 
             rotation = extrinsics[0:3,0:3]
-            print(f"{file_name} : {helpers.get_euler_angles(rotation)}")
         if nbr_img != 0:
             print(f"total error: {mean_error/nbr_img}")
         
@@ -560,6 +549,7 @@ class Sphere3D(QWidget):
         self.current_image = self.next_image()
 
         #init dots again
+        self.dots = dict()
         self.dots[0] = helpers.Point3D(0, 'Point_0', QColor('blue'))
 
     def delete_dot(self, id):
@@ -744,28 +734,24 @@ class Sphere3D(QWidget):
             pass
 
     def export(self):
-        print("export")
-        df = pd.DataFrame(columns=["Color", "X", "Y", "Z"])
+        df = pd.DataFrame(columns=["Color", "X", "Y", "Z", "X_adjusted", "Y_adjusted", "Z_adjusted"])
         df.rename_axis("Label")
         centroid_x = []
         centroid_y = []
         centroid_z = []
-        print(type(self.dots))
+        scale_factor = self.commands_widget.distance_calculator.scale_factor
         for key, dot in self.dots.items():
-            print(f"{key} : {dot}")
             pos = dot.get_position() if dot.get_position() is not None else [None, None, None]
-            df.loc[dot.get_label()] = [dot.get_color().name(), pos[0], pos[1], pos[2]]
+
+            df.loc[dot.get_label()] = [dot.get_color().name(), pos[0], pos[1], pos[2], pos[0]*scale_factor, pos[1]*scale_factor, pos[2]*scale_factor]
             if dot.get_position() is not None :
                 centroid_x.append(pos[0])
                 centroid_y.append(pos[1])
                 centroid_z.append(pos[2])
         if len(centroid_x) > 0:
             df.loc["centroid"] = ["#000000", sum(centroid_x)/len(centroid_x), sum(centroid_y)/len(centroid_y), sum(centroid_z)/len(centroid_z)]
-        print(df)
         export_file_name = QFileDialog.getSaveFileName(self, "Save File", self.directory+"/.csv","CSV (*.csv *.txt)")[0]
-        print(export_file_name)
         if len(export_file_name.strip()) != 0:
-            print("hallo")
             df.to_csv(export_file_name, index=True, index_label="Label", sep="\t")
 
 
@@ -792,7 +778,6 @@ class Sphere3D(QWidget):
             pos = self.estimate_position(self.dots[dot])
             if pos is not None:
                 self.dots[dot].set_position(pos)
-            print(f"{self.dots[dot].label} : {self.dots[dot].get_position()}")
             if self.dots[dot].get_position() is not None:
                 dot_images = self.dots[dot].get_dots()
                 for image in dot_images:
@@ -871,8 +856,6 @@ class InitWidget(QWidget):
         self.parent().layout.setCurrentIndex(1)
     
     def fixed_directory(self, directory):
-        print(f"dir : {self.dir} vs {directory} : {self.dir == directory}")
-
         if self.dir != directory:
             self.dlg_save.setDirectory(self.dir)
 
@@ -881,13 +864,10 @@ class InitWidget(QWidget):
         dlg = import_project.QImportProject()
         dlg.setWindowModality(Qt.WindowModality.NonModal)
         if dlg.exec():
-            print("accepted")
             self.dir = dlg.dir_image
             self.calib = dlg.calib
             self.calib_file_name = QFileDialog.getSaveFileName(self, "Save Calibration File", self.dir+"/.json","Json Files (*.json)")[0]
-            print(self.calib_file_name)
             
-            print(not self.calib_file_name.strip())
             if not self.calib_file_name.strip():
                 # canceled
                 return
@@ -899,30 +879,19 @@ class InitWidget(QWidget):
             
             images_thumbnails = set(glob.glob(f'{self.dir}/{self.calib["thumbnails"]}/*'))
 
-            print(os.path.exists(f'{self.dir}/{self.calib["thumbnails"]}'))
-            print(f'{self.dir}/{self.calib["thumbnails"]}')
-
-
-            print(len(images_thumbnails))
-            print(type(images_thumbnails))
-
             queue_img_to_make = deque()
             
             thumb_w = thumb_h = 640
             #sauver les thumbnails
             for key in self.calib["extrinsics"]:
-                #print(key)
                 if f'{self.dir}/{self.calib["thumbnails"]}/{key}' not in images_thumbnails:
-                    print(key)
                     queue_img_to_make.append(key)
                 else:
                     #get dimensions
-                    print(f'{self.dir}/{self.calib["thumbnails"]}/{key}')
                     with Image.open(f'{self.dir}/{self.calib["thumbnails"]}/{key}') as im:
                         thumb_w = im.width
                         thumb_h = im.height
             
-            print(len(queue_img_to_make))
             while len(queue_img_to_make) != 0:
                 print(len(queue_img_to_make))
                 img = queue_img_to_make.pop()
