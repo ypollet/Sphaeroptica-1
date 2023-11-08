@@ -25,10 +25,19 @@ class QImageLabel(QLabel):
 
     def set_scale_point(self, val):
         self.point_scale = val
-        self.paint_dots()
     
-    def set_visible_point(self, id, visible):
-        self.visible[id] = visible
+    def set_visible_point(self, id, is_visible):
+        self.visible[id] = is_visible
+
+    def set_visible_points(self, is_visible):
+        for id in self.visible:
+            self.visible[id] = is_visible
+
+    def points_hidden(self):
+        for id in self.visible:
+            if self.visible[id]:
+                return False  
+        return True
 
     def mousePressEvent(self, ev: QMouseEvent) -> None: 
         if ev.buttons() & Qt.MouseButton.RightButton:
@@ -143,8 +152,6 @@ class QPointButtons(QWidget):
         if action == helpers.Action.HIDE:
             self.visible = not self.visible
             sender_button.setText("hide" if self.visible else "show")
-            print("It is visible ? ", self.visible)
-            print(sender_button.text())
         self.button_clicked.emit(action)
 
 
@@ -239,6 +246,41 @@ class QScalePoint(QWidget):
         return self.size.value()
 
     def init_settings(self):
+        self.settings = QSettings("Sphaeroptica", "reconstruction") 
+
+class QHideAll(QWidget):
+    visibleChanged = pyqtSignal(object)
+    def __init__(self, parent):
+        super(QHideAll, self).__init__(parent)
+        self.init_settings()
+        self.parent = parent
+        full_layout = QHBoxLayout()
+        self.all_visible = True
+
+        self.button = QPushButton("hide all", self)
+        self.button.clicked.connect(self.clicked_visible)
+        
+        full_layout.addWidget(self.button)     
+
+        self.setLayout(full_layout)
+        self.setMaximumWidth(200)
+
+    def clicked_visible(self):
+        self.all_visible = not self.all_visible
+        self.button.setText("hide all" if self.all_visible else "show all")
+        print(self.all_visible)
+        self.visibleChanged.emit(self.all_visible)
+    
+    def set_visible(self, all_visible):
+        self.all_visible = all_visible
+        self.button.setText("hide all" if self.all_visible else "show all")
+        self.visibleChanged.emit(self.all_visible)
+    
+    def set_visibility(self, all_visible):
+        self.all_visible = all_visible
+        self.button.setText("hide all" if self.all_visible else "show all")
+
+    def init_settings(self):
         self.settings = QSettings("Sphaeroptica", "reconstruction")    
   
 class QImageViewer(QMainWindow):
@@ -299,12 +341,16 @@ class QImageViewer(QMainWindow):
         self.scale_point = QScalePoint(self)
         self.scale_point.valChanged.connect(self.changeScalePoint)
 
+        self.hide_all_button = QHideAll(self)
+        self.hide_all_button.visibleChanged.connect(self.changeVisibility)
+
         self.points = QPoints(dots)
         self.points.delete.connect(self.delete_point)
         self.points.showed.connect(self.show_point)
         self.points.hidden.connect(self.hide_point)
 
         self.side_bar.addWidget(self.scale_point)
+        self.side_bar.addWidget(self.hide_all_button)
         self.side_bar.addWidget(self.points)
 
 
@@ -316,15 +362,26 @@ class QImageViewer(QMainWindow):
     
     def changeScalePoint(self, val):
         self.image_label.set_scale_point(val)
+        self.image_label.paint_dots()
+    
+    def changeVisibility(self, bool):
+        self.image_label.set_visible_points(bool)
+        for i in range(len(self.points.buttons)):
+            self.points.buttons[i].hide_button.setText("hide" if bool else "show")
+            self.points.buttons[i].visible = bool
+        self.image_label.paint_dots()        
 
     def show_point(self, id):
         print(f"show {id}")
         self.image_label.set_visible_point(id, True)
+        self.hide_all_button.set_visibility(True)
         self.image_label.paint_dots()
 
     def hide_point(self, id):
         print(f"hide {id}")
         self.image_label.set_visible_point(id, False)
+        if self.image_label.points_hidden():
+            self.hide_all_button.set_visibility(False)
         self.image_label.paint_dots()
 
     def delete_point(self, id):
