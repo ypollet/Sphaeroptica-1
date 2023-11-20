@@ -4,8 +4,8 @@ Copyright Yann Pollet 2023
 
 
 import cv2 as cv
-from PyQt6.QtCore import Qt, pyqtSignal, QSettings, QRectF
-from PyQt6.QtGui import QImage, QPixmap, QPalette, QPainter, QAction, QMouseEvent, QCloseEvent, QPen, QColor, QKeyEvent, QDragMoveEvent
+from PyQt6.QtCore import Qt, pyqtSignal, QSettings, QRectF, QRect, QSize
+from PyQt6.QtGui import QImage, QPixmap, QPalette, QPainter, QAction, QMouseEvent, QCloseEvent, QPen, QColor, QKeyEvent, QResizeEvent
 from PyQt6.QtWidgets import (QWidget, QLabel, QSizePolicy, QScrollArea, QMessageBox, QMainWindow, QMenu, QApplication, QScrollBar, QHBoxLayout, 
                              QVBoxLayout, QPushButton, QSpinBox, QScroller)
 
@@ -13,8 +13,8 @@ from scripts import helpers
 
 INIT_POINT_WIDTH = 3
 class QImageLabel(QLabel):
-    def __init__(self, image : QImage, base_factor : float, dots : dict(), point_scale : int):
-        super().__init__()
+    def __init__(self, parent : QWidget, image : QImage, base_factor : float, dots : dict(), point_scale : int):
+        super().__init__(parent)
         self.dots = dots
         self.visible = {id:True for id in self.dots}
         self.point_scale = point_scale
@@ -69,7 +69,7 @@ class QImageLabel(QLabel):
         self.setPixmap(canvas)
 
     def normalSize(self):
-        scaled_image = self.image.scaled(self.window().image_area.size(), Qt.AspectRatioMode.KeepAspectRatio)
+        scaled_image = self.image.scaled(self.window().image_area.size() - QSize(2,2), Qt.AspectRatioMode.KeepAspectRatio)
         self.setPixmap(scaled_image)
         self.adjustSize()
         scale = self.size().width()/self.image.size().width()
@@ -217,6 +217,7 @@ class QScalePoint(QWidget):
     valChanged = pyqtSignal(object)
     def __init__(self, parent):
         super(QScalePoint, self).__init__(parent)
+
         self.init_settings()
         self.parent = parent
         full_layout = QHBoxLayout()
@@ -263,7 +264,6 @@ class QHideAll(QWidget):
     def clicked_visible(self):
         self.all_visible = not self.all_visible
         self.button.setText("hide all" if self.all_visible else "show all")
-        print(self.all_visible)
         self.visibleChanged.emit(self.all_visible)
     
     def set_visible(self, all_visible):
@@ -276,12 +276,15 @@ class QHideAll(QWidget):
         self.button.setText("hide all" if self.all_visible else "show all")
 
     def init_settings(self):
-        self.settings = QSettings("Sphaeroptica", "reconstruction")    
+        self.settings = QSettings("Sphaeroptica", "reconstruction")
+ 
   
 class QImageViewer(QMainWindow):
     closeSignal = pyqtSignal(object)
-    def __init__(self, path_name : str, dots : dict):
+    def __init__(self, path_name : str, dots : dict, init_geometry : QRect = None):
         super().__init__()
+
+        self.setGeometry(init_geometry)
 
         self.init_settings()
         self.image = None
@@ -300,7 +303,7 @@ class QImageViewer(QMainWindow):
             self.close()
             return
     
-        self.image_label = QImageLabel(image, 0.10, dots, INIT_POINT_WIDTH if self.settings.value("point_scale") is None else int(self.settings.value("point_scale")))
+        self.image_label = QImageLabel(self, image, 0.10, dots, INIT_POINT_WIDTH if self.settings.value("point_scale") is None else int(self.settings.value("point_scale")))
         
         self.image_label.setBackgroundRole(QPalette.ColorRole.Dark)
         self.image_label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Ignored)
@@ -313,8 +316,11 @@ class QImageViewer(QMainWindow):
         self.image_area.setVisible(False)
         self.image_area.setSizePolicy(QSizePolicy.Policy.Expanding,
             QSizePolicy.Policy.Expanding)
+        self.image_area.setWidgetResizable(False)
         self.image_area.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
+        
+        
+        self.image_area.adjustSize()
         full_layout.addWidget(self.image_area)
 
         self.createActions()
@@ -323,8 +329,6 @@ class QImageViewer(QMainWindow):
         self.setWindowTitle("Image Viewer")
         self.setSizePolicy(QSizePolicy.Policy.Expanding,
             QSizePolicy.Policy.Expanding)
-        
-        self.resize(800,600)
 
         self.image_area.setVisible(True)
         self.initActions()
@@ -348,12 +352,17 @@ class QImageViewer(QMainWindow):
         self.side_bar.addWidget(self.hide_all_button)
         self.side_bar.addWidget(self.points)
 
-
         full_layout.addLayout(self.side_bar)
 
         widget = QWidget()
         widget.setLayout(full_layout)
+
         self.setCentralWidget(widget)
+
+
+        self.normalSize()
+
+
     
     def changeScalePoint(self, val):
         self.image_label.set_scale_point(val)
@@ -432,8 +441,8 @@ class QImageViewer(QMainWindow):
         self.exitAct = QAction("&Exit", self, shortcut="Ctrl+Q", triggered=self.close)
         self.zoomInAct = QAction("Zoom &In (5%)", self, shortcut="Ctrl++", enabled=False, triggered=self.zoomIn)
         self.zoomOutAct = QAction("Zoom &Out (5%)", self, shortcut="Ctrl+-", enabled=False, triggered=self.zoomOut)
-        self.normalSizeAct = QAction("&Normal Size", self, shortcut="Ctrl+S", enabled=False, triggered=self.normalSize)
-        self.fullImageAct = QAction("&Fit to Window", self, enabled=False, shortcut="Ctrl+F",
+        self.normalSizeAct = QAction("Fit to Window", self, shortcut="Ctrl+S", enabled=False, triggered=self.normalSize)
+        self.fullImageAct = QAction("&Full Image", self, enabled=False, shortcut="Ctrl+F",
                                       triggered=self.fullImage)
         self.aboutAct = QAction("&About", self, triggered=self.about)
         self.aboutQtAct = QAction("About &Qt", self, triggered=QApplication.aboutQt)
@@ -467,6 +476,7 @@ class QImageViewer(QMainWindow):
     def adjustScrollBar(self, scrollBar : QScrollBar, factor : float):
         scrollBar.setValue(int(factor * scrollBar.value()
                                + ((factor - 1) * scrollBar.pageStep() / 2)))
+
 
     def closeEvent(self, a0: QCloseEvent) -> None:
         self.closeSignal.emit(self.image_label.dots)
