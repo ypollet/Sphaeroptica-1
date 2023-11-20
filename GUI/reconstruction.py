@@ -513,8 +513,8 @@ class Sphere3D(QWidget):
 
         mean_error = 0
         nbr_img = 0
-        self.lowest_lat = -90#float('inf')
-        self.highest_lat = 90#-float('inf')
+        self.lowest_lat = float('inf')
+        self.highest_lat = -float('inf')
         for file_name in keys:
             # compute error
             
@@ -544,6 +544,7 @@ class Sphere3D(QWidget):
         if nbr_img != 0:
             print(f"total error: {mean_error/nbr_img}")
         
+        print(f"Lowest = {self.lowest_lat}; Highest = {self.highest_lat}")
         print(f"Number images = {nbr_img}")
 
         self.current_image = self.next_image()
