@@ -465,6 +465,7 @@ class Sphere3D(QWidget):
         self.setContentsMargins(0,0,0,0)
     
     def load(self, calibration):
+        print("LOAD")
         self.images = {}
         self.directory = calibration.absolutePath()
         self.calibration_file = calibration.fileName()
@@ -728,10 +729,11 @@ class Sphere3D(QWidget):
     def resizeEvent(self, a0: QResizeEvent) -> None:
         try:
             self.current_image = self.get_nearest_image(self._angles_sphere)
-            pixmap = self.sphere.pixmap()
+            pixmap = QPixmap(f'{self.directory}/{self.thumbnails}/{self.current_image}')
             pixmap = pixmap.scaled(self.sphere.height(), self.sphere.width(), Qt.AspectRatioMode.KeepAspectRatio)
             self.sphere.setPixmap(pixmap)
-        except:
+        except Exception as e:
+            print("Error in ResizeEvent")
             pass
 
     def export(self):
@@ -763,7 +765,7 @@ class Sphere3D(QWidget):
         extrinsics = extrinsics[0:3, 0:4]
 
         dots = {k:dot.to_tuple(self.current_image, intrinsics, extrinsics, distCoeffs) for k, dot in self.dots.items()}
-        self.win = show_picture.QImageViewer(f'{self.directory}/{self.current_image}', dots)
+        self.win = show_picture.QImageViewer(f'{self.directory}/{self.current_image}', dots, self.window().geometry())
         self.win.setWindowModality(Qt.WindowModality.ApplicationModal)
         self.win.show()
         self.win.closeSignal.connect(self.get_dots)
