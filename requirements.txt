@@ -4,3 +4,4 @@ pyqt6
 mutils
 opencv-python
 matplotlib
+imutils
