@@ -157,15 +157,14 @@ class QPoints(QScrollArea):
         super().__init__(parent)
         self.w = QWidget()
         self.add_pt_btn = QPushButton("Add point")
+        self.add_pt_btn.setSizePolicy(QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Maximum)
         self.add_pt_btn.clicked.connect(self.add_dot)
 
         self.load_points(self.window().dots)
-
         self.setBackgroundRole(QPalette.ColorRole.Dark)
-        self.setSizePolicy(QSizePolicy.Policy.MinimumExpanding,
+        self.setSizePolicy(QSizePolicy.Policy.Expanding,
             QSizePolicy.Policy.Expanding)
-        self.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.setMaximumWidth(200)
         self.installEventFilter(self)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setWidgetResizable(True)
@@ -192,7 +191,7 @@ class QPoints(QScrollArea):
             self.vbox.addWidget(button)
         self.vbox.addWidget(self.add_pt_btn)
         self.w.setLayout(self.vbox)
-        self.w.setSizePolicy(QSizePolicy.Policy.Maximum,
+        self.w.setSizePolicy(QSizePolicy.Policy.Expanding,
             QSizePolicy.Policy.Maximum)
         self.setWidget(self.w)
     
@@ -223,6 +222,8 @@ class QPoints(QScrollArea):
 class DistanceWidget(QWidget):
     def __init__(self, parent):
         super(QWidget, self).__init__(parent)
+        self.init_settings()
+
         self.full_layout = QVBoxLayout()
         self.selection = QHBoxLayout()
         self.left = QComboBox()
@@ -253,6 +254,15 @@ class DistanceWidget(QWidget):
         self.validator.setNotation(QDoubleValidator.Notation.StandardNotation)
         self.value.setValidator(self.validator)
         self.distance.addWidget(self.value)
+        
+        self.scale_widget = QComboBox(self)
+        for key in helpers.Scale._member_map_.keys():
+            self.scale_widget.addItem(key)
+        print(f"Current scale : {self.reconstruction_settings.value('scale')}")
+
+        self.scale_widget.setCurrentText(self.reconstruction_settings.value("scale").name if self.reconstruction_settings.value("scale") is not None else helpers.Scale.M.name)
+        self.scale_widget.currentTextChanged.connect(self.update_scale_settings)
+        self.distance.addWidget(self.scale_widget)
 
         self.scale_factor = 1.0
         self.original_value = 0.0
@@ -261,11 +271,19 @@ class DistanceWidget(QWidget):
         #wait init of all widgets to add the QCombobox listener
         self.left.currentIndexChanged.connect(self.update_dist)
         self.right.currentIndexChanged.connect(self.update_dist)
+        self.scale_widget.currentIndexChanged.connect(self.update_dist)
 
         self.full_layout.addLayout(self.selection)
         self.full_layout.addLayout(self.distance)
 
         self.setLayout(self.full_layout)
+    
+    def init_settings(self):
+        self.reconstruction_settings = QSettings("Sphaeroptica", "reconstruction")
+    
+    def update_scale_settings(self):
+        print(f"current text scale : {helpers.Scale[str(self.scale_widget.currentText())]}")
+        self.reconstruction_settings.setValue("scale", helpers.Scale[str(self.scale_widget.currentText())])
     
     def update_scale(self):
         if self.original_value == 0.0:
@@ -318,7 +336,7 @@ class DistanceWidget(QWidget):
             self.original_value = 0.0
             return
         self.original_value = reconstruction.get_distance(self.points[self.left.currentData()].get_position(), self.points[self.right.currentData()].get_position())
-        self.value.setText(str(self.original_value * self.scale_factor))
+        self.value.setText(str(self.original_value * self.scale_factor / helpers.Scale[str(self.scale_widget.currentText())].value))
         self.value.setCursorPosition(0)
 
 class CommandsWidget(QWidget):
@@ -332,6 +350,8 @@ class CommandsWidget(QWidget):
     def __init__(self, parent):
         super(QWidget, self).__init__(parent)
         self.v_layout = QVBoxLayout()
+
+        self.v_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         # Shortcut important pictures
         self.grid_layout = QGridLayout()
@@ -363,7 +383,10 @@ class CommandsWidget(QWidget):
         self.grid_layout.addWidget(self.right, 1, 2)
         self.grid_layout.addWidget(self.inferior, 2, 1)
         self.grid_layout.addWidget(self.posterior, 3, 1)
-        
+
+        self.grid_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.grid_layout.setVerticalSpacing(10)
+        self.grid_layout.setHorizontalSpacing(30)
 
         self.v_layout.addLayout(self.grid_layout)
 
@@ -371,7 +394,6 @@ class CommandsWidget(QWidget):
         self.points = QPoints(self)
         self.points.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.v_layout.addWidget(self.points)
-        self.v_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         self.points.delete_dot.connect(self.delete_point)
         self.points.reset_dot.connect(self.reset_point)
@@ -389,8 +411,6 @@ class CommandsWidget(QWidget):
         self.export_button.clicked.connect(self.to_export)
         self.v_layout.addWidget(self.export_button)
 
-
-        self.v_layout.setAlignment(Qt.AlignmentFlag.AlignRight)
         self.setLayout(self.v_layout)
 
 
@@ -475,7 +495,7 @@ class Sphere3D(QWidget):
         self.commands_widget.setSizePolicy(QSizePolicy.Policy.Maximum,QSizePolicy.Policy.Minimum)
         self.commands_widget.setContentsMargins(0,0,0,0)
         self.h_layout.setSpacing(0)
-        self.h_layout.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        self.h_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
 
         
         self.h_layout.addLayout(self.v_layout)

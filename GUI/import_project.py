@@ -260,7 +260,6 @@ class QImportProject(QDialog):
     
     def enable_ok(self):
         boolean = self.calib.get("intrinsics") is not None and self.calib.get("extrinsics") is not None and self.dir_image is not None
-
         self.buttonBox.button(QDialogButtonBox.StandardButton.Ok).setEnabled(boolean)
     
     def update_dir_image(self, dir):
