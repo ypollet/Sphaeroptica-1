@@ -426,9 +426,7 @@ class Sphere3D(QWidget):
         self._angles_sphere = (0,0) #(180,90)
         self._old_angles = (0,0)
 
-        # Point3D.id -> Point3D
-        self.dots = dict()
-        self.dots[0] = helpers.Point3D(0, 'Point_0', QColor('blue'))#, position=(0.010782485813073936, 0.00032211282041287505, 0.03141674225785502, 1.0)) , position=(0.0,0.0,0.0,1.0)
+        self.init_dots()
 
         self.counter = 0
 
@@ -487,6 +485,11 @@ class Sphere3D(QWidget):
         self.setLayout(self.h_layout)
 
         self.setContentsMargins(0,0,0,0)
+    
+    def init_dots(self):
+        # Point3D.id -> Point3D
+        self.dots = dict()
+        self.dots[0] = helpers.Point3D(0, 'Point_0', QColor('blue'))
     
     def load(self, calibration):
         print("LOAD")
@@ -983,6 +986,7 @@ class ReconstructionWidget(QWidget):
     
     def load_dir(self, dir):
         self.viewer.load(dir)
+        self.viewer.update_points()
         self.reconstruction_settings.setValue("directory", dir.absoluteFilePath())
     
     def keyPressEvent(self, keys_pressed: QKeyEvent) -> None:
