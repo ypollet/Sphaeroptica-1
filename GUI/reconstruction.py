@@ -21,7 +21,7 @@ from PyQt6.QtWidgets import (
     QComboBox
 )
 from PyQt6.QtGui import (
-    QPixmap, QResizeEvent, QMouseEvent, QImage, QPalette,
+    QPixmap, QResizeEvent, QMouseEvent, QImage, QPalette, QIcon,
     QPaintEvent, QPainter, QBrush, QColor, QKeyEvent, QDoubleValidator)
 from PyQt6.QtCore import Qt, QRect, pyqtSignal, QSettings, QFileInfo, QEvent, QLocale
 
@@ -100,6 +100,7 @@ class QColorPixmap(QLabel):
 
 class QPointEntry(QWidget):
     delete_point = pyqtSignal()
+    reset_point = pyqtSignal()
     label_changed = pyqtSignal(object)
     color_changed = pyqtSignal(object)
     def __init__(self, point : helpers.Point3D):
@@ -117,7 +118,14 @@ class QPointEntry(QWidget):
         layout.addWidget(self.color_label)
         self.color_label.color_changed.connect(self.change_color)
 
-        self.delete_button = QPushButton(text="x")
+        self.reset_button = QPushButton()
+        self.reset_button.setIcon(QIcon("icons/arrow-circle-double-135.png"))
+        self.reset_button.clicked.connect(self.reset)
+        self.reset_button.setFixedWidth(20)
+        layout.addWidget(self.reset_button)
+
+        self.delete_button = QPushButton()
+        self.delete_button.setIcon(QIcon("icons/cross.png"))
         self.delete_button.clicked.connect(self.delete)
         self.delete_button.setFixedWidth(20)
         layout.addWidget(self.delete_button)
@@ -127,6 +135,9 @@ class QPointEntry(QWidget):
     
     def delete(self):
         self.delete_point.emit()
+    
+    def reset(self):
+        self.reset_point.emit()
     
     def change_color(self, color):
         self.color_changed.emit(color)
@@ -138,6 +149,7 @@ class QPointEntry(QWidget):
 class QPoints(QScrollArea):
     dot_added = pyqtSignal()
     delete_dot = pyqtSignal(object)
+    reset_dot = pyqtSignal(object)
     label_changed = pyqtSignal(object)
     color_changed = pyqtSignal(object)
 
@@ -174,6 +186,7 @@ class QPoints(QScrollArea):
             button = QPointEntry(points[i])
             self.buttons.append(button)
             button.delete_point.connect(self.delete_point)
+            button.reset_point.connect(self.reset_point)
             button.label_changed.connect(self.change_label)
             button.color_changed.connect(self.change_color)
             self.vbox.addWidget(button)
@@ -187,6 +200,11 @@ class QPoints(QScrollArea):
         sender_button = self.sender()
         id = sender_button.id
         self.delete_dot.emit(id)
+    
+    def reset_point(self):
+        sender_button = self.sender()
+        id = sender_button.id
+        self.reset_dot.emit(id)
 
     def add_dot(self):
         self.dot_added.emit()
@@ -306,6 +324,7 @@ class DistanceWidget(QWidget):
 class CommandsWidget(QWidget):
     dot_added = pyqtSignal()
     delete_dot = pyqtSignal(object)
+    reset_dot = pyqtSignal(object)
     label_changed = pyqtSignal(object)
     color_changed = pyqtSignal(object)
     export = pyqtSignal()
@@ -355,6 +374,7 @@ class CommandsWidget(QWidget):
         self.v_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         self.points.delete_dot.connect(self.delete_point)
+        self.points.reset_dot.connect(self.reset_point)
         self.points.label_changed.connect(self.change_label)
         self.points.color_changed.connect(self.change_color)
         self.points.dot_added.connect(self.add_dot)
@@ -382,6 +402,9 @@ class CommandsWidget(QWidget):
 
     def delete_point(self, id):
         self.delete_dot.emit(id)
+
+    def reset_point(self, id):
+        self.reset_dot.emit(id)
     
     def add_dot(self):
         self.dot_added.emit()
@@ -445,6 +468,7 @@ class Sphere3D(QWidget):
         
         self.commands_widget = CommandsWidget(self)
         self.commands_widget.delete_dot.connect(self.delete_dot)
+        self.commands_widget.reset_dot.connect(self.reset_dot)
         self.commands_widget.label_changed.connect(self.change_label)
         self.commands_widget.color_changed.connect(self.change_color)
         self.commands_widget.dot_added.connect(self.add_dot)
@@ -556,6 +580,11 @@ class Sphere3D(QWidget):
 
     def delete_dot(self, id):
         self.dots.pop(id)
+        self.commands_widget.points.load_points(self.dots)
+        self.commands_widget.distance_calculator.load_points(self.dots)
+    
+    def reset_dot(self, id):
+        self.dots[id].reset_point()
         self.commands_widget.points.load_points(self.dots)
         self.commands_widget.distance_calculator.load_points(self.dots)
     

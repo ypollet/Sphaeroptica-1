@@ -85,6 +85,10 @@ class Point3D():
     
     def add_dot(self, image, dot):
         self.dots[image] = dot
+
+    def reset_point(self):
+        self.dots = dict()
+        self.position = None
     
     def get_image_dots(self, image):
         return self.dots[image] if image in self.dots else None
