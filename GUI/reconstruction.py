@@ -18,7 +18,7 @@ from collections import deque
 from PyQt6.QtWidgets import (
     QLabel, QWidget, QVBoxLayout, QHBoxLayout, QStackedLayout, QGridLayout,
     QPushButton, QFileDialog, QColorDialog, QSizePolicy, QMessageBox, QScrollArea, QLineEdit,
-    QComboBox
+    QComboBox, QCheckBox, QDialog, QDialogButtonBox
 )
 from PyQt6.QtGui import (
     QPixmap, QResizeEvent, QMouseEvent, QImage, QPalette, QIcon,
@@ -795,20 +795,48 @@ class Sphere3D(QWidget):
         centroid_y = []
         centroid_z = []
         scale_factor = self.commands_widget.distance_calculator.scale_factor
-        for key, dot in self.dots.items():
-            pos = dot.get_position() if dot.get_position() is not None else [None, None, None]
 
+        dots_with_pos = [dot for _,dot in self.dots.items() if dot.get_position() is not None]
+
+        if len(dots_with_pos) == 0:
+            print("Export cancelled")
+            return
+
+
+        list_dots_centroid = self.get_list_dots_for_centroid(dots_with_pos)
+
+        for dot in dots_with_pos:
+            pos = dot.get_position()
+            
             df.loc[dot.get_label()] = [dot.get_color().name(), pos[0], pos[1], pos[2], pos[0]*scale_factor, pos[1]*scale_factor, pos[2]*scale_factor]
-            if dot.get_position() is not None :
+            if dot.id in list_dots_centroid :
                 centroid_x.append(pos[0])
                 centroid_y.append(pos[1])
                 centroid_z.append(pos[2])
         if len(centroid_x) > 0:
-            df.loc["centroid"] = ["#000000", sum(centroid_x)/len(centroid_x), sum(centroid_y)/len(centroid_y), sum(centroid_z)/len(centroid_z)]
+            center_x, center_y, center_z = sum(centroid_x)/len(centroid_x), sum(centroid_y)/len(centroid_y), sum(centroid_z)/len(centroid_z)
+            df.loc["centroid"] = ["#000000", center_x, center_y, center_z, center_x*scale_factor, center_y*scale_factor, center_z*scale_factor]
+        
         export_file_name = QFileDialog.getSaveFileName(self, "Save File", self.directory+"/.csv","CSV (*.csv *.txt)")[0]
         if len(export_file_name.strip()) != 0:
             df.to_csv(export_file_name, index=True, index_label="Label", sep="\t")
-
+    
+    def get_list_dots_for_centroid(self, dots_with_pos):
+        msg = CentroidMessage(dots_with_pos)
+        msg.setWindowModality(Qt.WindowModality.ApplicationModal)
+        set_points_chosen = set()
+            
+        retval = msg.exec()
+        print("value of pressed message box button:", retval)
+        if not retval :
+            print("Cancelled")
+            return None
+        
+        for i in range(len(msg.checkboxes)):
+            checkbox = msg.checkboxes[i]
+            if checkbox.isChecked():
+                set_points_chosen.add(msg.dots[i].id)
+        return set_points_chosen
 
     def values_clicked(self) -> None:
         intrinsics = np.matrix(self.calibration_dict["intrinsics"]["camera matrix"]["matrix"])
@@ -877,6 +905,44 @@ class Sphere3D(QWidget):
             proj_points.append(proj_point)
         points3D = reconstruction.triangulate_point(proj_points)
         return tuple(points3D)
+
+class CentroidMessage(QDialog):
+    def __init__(self, dots_with_pos):
+        super(CentroidMessage, self).__init__()
+        self.setWindowTitle("MessageBox demo")
+
+        v_layout = QVBoxLayout()
+        v_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        self.hide_all_button = QPushButton("hide all")
+        self.hide_all_button.clicked.connect(self.hide_all)
+        v_layout.addWidget(self.hide_all_button)
+        self.visible = True
+
+        self.checkboxes = list()
+        self.dots = list()
+        for i in dots_with_pos:
+            checkbox = QCheckBox(i.get_label())
+            checkbox.setCheckState(Qt.CheckState.Checked)
+            self.checkboxes.append(checkbox)
+            self.dots.append(i)
+            v_layout.addWidget(checkbox)
+        
+        Qbtn = QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        self.button_box = QDialogButtonBox(Qbtn)
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.reject)
+        v_layout.addWidget(self.button_box)
+
+        v_layout.setSpacing(20)
+        self.setLayout(v_layout)
+
+        
+    
+    def hide_all(self):
+        for i in self.checkboxes:
+            i.setCheckState(Qt.CheckState.Unchecked)
+    
+
 
 class InitWidget(QWidget):
 
