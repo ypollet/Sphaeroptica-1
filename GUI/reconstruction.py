@@ -292,7 +292,7 @@ class DistanceWidget(QWidget):
             return
         # There is already a double validator on the QLineEdit
         value = float(self.value.text())
-        self.scale_factor = value / self.original_value
+        self.scale_factor = value * helpers.Scale[str(self.scale_widget.currentText())].value / self.original_value
         self.value.setCursorPosition(0)
         print(f"Scale factor set at {self.scale_factor}")
     
@@ -805,6 +805,9 @@ class Sphere3D(QWidget):
 
         list_dots_centroid = self.get_list_dots_for_centroid(dots_with_pos)
 
+        if list_dots_centroid is None:
+            return
+
         for dot in dots_with_pos:
             pos = dot.get_position()
             
@@ -923,6 +926,7 @@ class CentroidMessage(QDialog):
         for i in dots_with_pos:
             checkbox = QCheckBox(i.get_label())
             checkbox.setCheckState(Qt.CheckState.Checked)
+            checkbox.clicked.connect(self.check_visibility)
             self.checkboxes.append(checkbox)
             self.dots.append(i)
             v_layout.addWidget(checkbox)
@@ -940,9 +944,20 @@ class CentroidMessage(QDialog):
     
     def hide_all(self):
         for i in self.checkboxes:
-            i.setCheckState(Qt.CheckState.Unchecked)
+            print(f"Button {i.text()} : {Qt.CheckState.Unchecked if self.visible else Qt.CheckState.Checked}")
+            i.setCheckState(Qt.CheckState.Unchecked if self.visible else Qt.CheckState.Checked)
+        self.visible = not self.visible
+        self.hide_all_button.setText("hide all" if self.visible else "show all")
     
-
+    def check_visibility(self):
+        self.visible = self.check_visible()
+        self.hide_all_button.setText("hide all" if self.visible else "show all")
+        
+    def check_visible(self):
+        for i in self.checkboxes:
+            if i.isChecked():
+                return True
+        return False
 
 class InitWidget(QWidget):
 
