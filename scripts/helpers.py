@@ -98,10 +98,18 @@ class Point3D():
     
     def to_tuple(self, image, intrinsics, extrinsics, distCoeffs):
         rep_point = reconstruction.project_points(np.matrix(self.position), intrinsics, extrinsics, distCoeffs) if self.position is not None else None
-        return {"label": self.label,
+        return {"id": self.id,
+                "label": self.label,
                 "dot": self.dots[image] if image in self.dots else None,
                 "color": self.color,
                 "position": Point(rep_point.item(0),rep_point.item(1)) if rep_point is not None else None }
+
+    def __eq__(self, other):
+        if isinstance(other, Point3D):
+            return self.id == other.id
+        if isinstance(other, int):
+            return self.id == other
+        return False
     
     def __str__(self) -> str:
         string = f"{self.label} : {self.position}\n"

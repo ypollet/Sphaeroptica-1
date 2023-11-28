@@ -3,6 +3,7 @@ Copyright Yann Pollet 2023
 '''
 
 
+from PyQt6 import QtGui
 import cv2 as cv
 from PyQt6.QtCore import Qt, pyqtSignal, QSettings, QRectF, QRect, QSize
 from PyQt6.QtGui import QImage, QPixmap, QPalette, QPainter, QAction, QMouseEvent, QCloseEvent, QPen, QColor, QKeyEvent, QResizeEvent
@@ -13,10 +14,10 @@ from scripts import helpers
 
 INIT_POINT_WIDTH = 3
 class QImageLabel(QLabel):
-    def __init__(self, parent : QWidget, image : QImage, base_factor : float, dots : dict(), point_scale : int):
+    def __init__(self, parent : QWidget, image : QImage, base_factor : float, dots : list(), point_scale : int):
         super().__init__(parent)
         self.dots = dots
-        self.visible = {id:True for id in self.dots}
+        self.visible = {i["id"]:True for i in self.dots}
         self.point_scale = point_scale
         self.scaleFactor = base_factor
         self.image = QPixmap.fromImage(image)
@@ -52,17 +53,17 @@ class QImageLabel(QLabel):
         painter = QPainter(canvas)
         pen = QPen()
         pen.setWidth(self.point_scale)
-        for i in self.dots:     
-            pen.setColor(self.dots[i]['color'])
+        for dot in self.dots:     
+            pen.setColor(dot['color'])
             painter.setPen(pen)
-            if(self.dots[i]["dot"] is None):
-                if not self.visible[i]:
+            if(dot["dot"] is None):
+                if not self.visible[dot["id"]]:
                     continue
-                if self.dots[i]["position"] is not None:
-                    point = self.dots[i]["position"].scaled(self.scaleFactor)
+                if dot["position"] is not None:
+                    point = dot["position"].scaled(self.scaleFactor)
                     painter.drawArc(QRectF(point.x, point.y,float(self.point_scale)/3,float(self.point_scale)/3), 0, 16*360)
                 continue
-            point = self.dots[i]["dot"].scaled(self.scaleFactor)
+            point = dot["dot"].scaled(self.scaleFactor)
             painter.drawPoint(int(point.x), int(point.y))
 
         painter.end()
@@ -112,7 +113,7 @@ class QColorPixmap(QLabel):
 
 class QPointButtons(QWidget):
     button_clicked = pyqtSignal(object)
-    def __init__(self, label, color, id):
+    def __init__(self, label, color, index):
         super(QWidget, self).__init__()
         layout = QHBoxLayout()
 
@@ -135,7 +136,7 @@ class QPointButtons(QWidget):
         self.delete_button.setFixedWidth(20)
         layout.addWidget(self.delete_button)
 
-        self.id = id
+        self.index = index
         self.visible = True
         self.setLayout(layout)
 
@@ -162,17 +163,14 @@ class QPoints(QScrollArea):
         self.vbox = QVBoxLayout()  
         self.vbox.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.buttons = []
-        sorted_points_k = sorted(points)
-        self.indexes = {}
         index = 0
-        for i in sorted_points_k:
-            button = QPointButtons(points[i]["label"], points[i]["color"],i)
+        for point in points:
+            button = QPointButtons(point["label"], point["color"], index)
             self.buttons.append(button)
             button.button_clicked.connect(self.btnListener)
             self.vbox.addWidget(button)
-            self.indexes[i] = index
             index += 1
-        self.check(sorted_points_k[0])
+        self.check(0)
         self.w.setLayout(self.vbox)
 
         self.setBackgroundRole(QPalette.ColorRole.Dark)
@@ -184,32 +182,32 @@ class QPoints(QScrollArea):
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setWidgetResizable(True)
     
-    def check(self, id):
+    def check(self, index):
         for button in self.buttons:
             button.setChecked(False)
-        self.buttons[self.indexes[id]].setChecked(True)
+        self.buttons[index].setChecked(True)
     
-    def delete_point(self, id):
-        self.delete.emit(id)
+    def delete_point(self, index):
+        self.delete.emit(index)
     
-    def show_point(self, show, id):
+    def show_point(self, show, index):
         if show:
-            self.showed.emit(id)
+            self.showed.emit(index)
         else:
-            self.hidden.emit(id)
+            self.hidden.emit(index)
 
     def btnListener(self, action):
         sender_button = self.sender()
         if action == helpers.Action.SELECT:
-            self.check(sender_button.id)
-            self.window().point = sender_button.id
+            self.check(sender_button.index)
+            self.window().point = sender_button.index
             return
         
         if action == helpers.Action.DELETE:
-            print(f"Delete : {sender_button.id}")
-            self.delete_point(sender_button.id)
+            print(f"Delete : {sender_button.index}")
+            self.delete_point(sender_button.index)
             return
-        self.show_point(sender_button.visible, sender_button.id)
+        self.show_point(sender_button.visible, sender_button.index)
         
         
 
@@ -281,14 +279,14 @@ class QHideAll(QWidget):
   
 class QImageViewer(QMainWindow):
     closeSignal = pyqtSignal(object)
-    def __init__(self, path_name : str, dots : dict, init_geometry : QRect = None):
+    def __init__(self, path_name : str, dots : list, init_geometry : QRect = None):
         super().__init__()
 
         self.setGeometry(init_geometry)
 
         self.init_settings()
         self.image = None
-        self.point = min(dots.keys())
+        self.point = 0
         full_layout = QHBoxLayout()
 
         # Open Image
@@ -359,9 +357,7 @@ class QImageViewer(QMainWindow):
 
         self.setCentralWidget(widget)
 
-
         self.normalSize()
-
 
     
     def changeScalePoint(self, val):
@@ -375,26 +371,26 @@ class QImageViewer(QMainWindow):
             self.points.buttons[i].visible = bool
         self.image_label.paint_dots()        
 
-    def show_point(self, id):
-        self.image_label.set_visible_point(id, True)
+    def show_point(self, index):
+        self.image_label.set_visible_point(index, True)
         self.hide_all_button.set_visibility(True)
         self.image_label.paint_dots()
 
-    def hide_point(self, id):
-        self.image_label.set_visible_point(id, False)
+    def hide_point(self, index):
+        self.image_label.set_visible_point(index, False)
         if self.image_label.points_hidden():
             self.hide_all_button.set_visibility(False)
         self.image_label.paint_dots()
 
-    def delete_point(self, id):
-        self.image_label.dots[id]["dot"] = None
+    def delete_point(self, index):
+        self.image_label.dots[index]["dot"] = None
         self.image_label.paint_dots()
     
     def update(self):
         self.image_label.paint_dots()
 
     def switchPoint(self, i : int):
-        if self.point+i in self.image_label.dots:
+        if self.point+i < len(self.image_label.dots) and self.point+i > 0:
             self.point += i
         self.points.check(self.point)
 

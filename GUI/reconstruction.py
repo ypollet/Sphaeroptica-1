@@ -17,13 +17,14 @@ from collections import deque
 
 from PyQt6.QtWidgets import (
     QLabel, QWidget, QVBoxLayout, QHBoxLayout, QStackedLayout, QGridLayout,
-    QPushButton, QFileDialog, QColorDialog, QSizePolicy, QMessageBox, QScrollArea, QLineEdit,
+    QPushButton, QFileDialog, QColorDialog, QSizePolicy, QScrollArea, QLineEdit,
     QComboBox, QCheckBox, QDialog, QDialogButtonBox
 )
 from PyQt6.QtGui import (
     QPixmap, QResizeEvent, QMouseEvent, QImage, QPalette, QIcon,
-    QPaintEvent, QPainter, QBrush, QColor, QKeyEvent, QDoubleValidator)
-from PyQt6.QtCore import Qt, QRect, pyqtSignal, QSettings, QFileInfo, QEvent, QLocale
+    QPaintEvent, QPainter, QBrush, QColor, QKeyEvent, QDoubleValidator,
+    QDragEnterEvent, QDropEvent, QDragMoveEvent, QDrag)
+from PyQt6.QtCore import Qt, QRect, pyqtSignal, QSettings, QFileInfo, QEvent, QLocale, QMimeData, QSize
 
 
 class _AngleValues(QWidget):
@@ -107,6 +108,13 @@ class QPointEntry(QWidget):
         super(QWidget, self).__init__()
         layout = QHBoxLayout()
 
+        self.drag_button = QLabel()
+        pixmap = QIcon("icons/grid-dot.png").pixmap(QSize(20,20))
+        self.drag_button.setPixmap(pixmap)
+        self.drag_button.setFixedWidth(20)
+        self.drag_button.setBackgroundRole(QPalette.ColorRole.Highlight)
+        layout.addWidget(self.drag_button)
+
         self.point = point
         self.label = QLineEdit(self)
         self.label.setFixedHeight(helpers.HEIGHT_COMPONENT)
@@ -146,6 +154,18 @@ class QPointEntry(QWidget):
         self.label.clearFocus()
         self.label_changed.emit(self.label.text())
 
+    def mouseMoveEvent(self, e):
+        print(f"Drag button {self.id}")
+        if e.buttons() == Qt.MouseButton.LeftButton:
+            drag = QDrag(self)
+            mime = QMimeData()
+            drag.setMimeData(mime)
+
+            pixmap = QPixmap(self.size())
+            self.render(pixmap)
+            drag.setPixmap(pixmap)
+            drag.exec(Qt.DropAction.MoveAction)
+
 class QPoints(QScrollArea):
     dot_added = pyqtSignal()
     delete_dot = pyqtSignal(object)
@@ -162,7 +182,7 @@ class QPoints(QScrollArea):
         self.add_pt_btn.clicked.connect(self.add_dot)
 
         self.load_points(self.window().dots)
-        self.setBackgroundRole(QPalette.ColorRole.Dark)
+        self.setBackgroundRole(QPalette.ColorRole.BrightText)
         self.setSizePolicy(QSizePolicy.Policy.Expanding,
             QSizePolicy.Policy.Expanding)
         self.installEventFilter(self)
@@ -179,21 +199,27 @@ class QPoints(QScrollArea):
     def load_points(self, points):
         self.w = QWidget()
         self.vbox = QVBoxLayout()
+
+        self.pointbox = QVBoxLayout()
         self.buttons = []
-        sorted_points_k = sorted(points)
-        for i in sorted_points_k:
-            button = QPointEntry(points[i])
+        for point in points:
+            button = QPointEntry(point)
             self.buttons.append(button)
             button.delete_point.connect(self.delete_point)
             button.reset_point.connect(self.reset_point)
             button.label_changed.connect(self.change_label)
             button.color_changed.connect(self.change_color)
-            self.vbox.addWidget(button)
+            self.pointbox.addWidget(button)
+        self.hidden_stop = QPointEntry(helpers.Point3D(-1, "hidden"))
+        self.hidden_stop.hide()
+        self.pointbox.addWidget(self.hidden_stop)
+        self.vbox.addLayout(self.pointbox)
         self.vbox.addWidget(self.add_pt_btn)
         self.w.setLayout(self.vbox)
         self.w.setSizePolicy(QSizePolicy.Policy.Expanding,
             QSizePolicy.Policy.Maximum)
         self.setWidget(self.w)
+        self.setAcceptDrops(True)
     
     def delete_point(self):
         sender_button = self.sender()
@@ -217,6 +243,34 @@ class QPoints(QScrollArea):
         sender_button = self.sender()
         id = sender_button.id
         self.color_changed.emit([id, color])
+    
+    def dragEnterEvent(self, a0: QDragEnterEvent) -> None:
+        print("Drag Points")
+        self.original_pos = a0.position()
+        a0.accept()
+
+
+    def dropEvent(self, a0: QDropEvent) -> None:
+        pos = a0.position()
+        widget = a0.source()
+
+        desc = pos.y() > self.original_pos.y()
+
+        last = self.pointbox.itemAt(self.pointbox.count()-1).widget()
+        if pos.y() > last.y() + last.size().height() // 2:
+            self.window().rec.viewer.update_index_dot(self.pointbox.count()-2, widget.id)
+        else:
+            for n in range(self.pointbox.count()):
+                # Get the widget at each index in turn.
+                w = self.pointbox.itemAt(n).widget()
+                print(f"{w.label.text()} : {pos.y()} < {w.y() + w.size().height() // 2}")
+                if pos.y() < w.y() + w.size().height() // 2:
+                    # We didn't drag past this widget.
+                    # insert to the left of it.
+                    self.window().rec.viewer.update_index_dot(n-1 if desc else n, widget.id)
+                    break
+        self.window().rec.viewer.update_points()
+        a0.accept()
 
 
 class DistanceWidget(QWidget):
@@ -302,7 +356,8 @@ class DistanceWidget(QWidget):
         self.update_dist()
 
     def load_points(self, points):
-        self.points = {}
+        self.points = list()
+        self.points.append(None)
         left_index = self.left.currentIndex()
         left_data = self.left.currentData()
         right_index = self.right.currentIndex()
@@ -313,11 +368,10 @@ class DistanceWidget(QWidget):
 
         self.left.addItem("",0)
         self.right.addItem("",0)
-        for i in points:
-            point = points[i]
+        for point in points:
             if point.get_position() is None:
                 continue
-            self.points[i] = point
+            self.points.append(point)
             self.left.addItem(point.get_label(),point.get_id())
             self.right.addItem(point.get_label(),point.get_id())
         
@@ -325,6 +379,7 @@ class DistanceWidget(QWidget):
             self.left.setCurrentIndex(left_index)
         else:
             self.left.setCurrentIndex(0)
+        
         if right_index is not None and self.right.itemData(right_index) == right_data:
             self.right.setCurrentIndex(right_index)
         else:
@@ -335,7 +390,7 @@ class DistanceWidget(QWidget):
             self.value.setText("0.0")
             self.original_value = 0.0
             return
-        self.original_value = reconstruction.get_distance(self.points[self.left.currentData()].get_position(), self.points[self.right.currentData()].get_position())
+        self.original_value = reconstruction.get_distance(self.points[self.left.currentIndex()].get_position(), self.points[self.right.currentIndex()].get_position())
         self.value.setText(str(self.original_value * self.scale_factor / helpers.Scale[str(self.scale_widget.currentText())].value))
         self.value.setCursorPosition(0)
 
@@ -508,8 +563,8 @@ class Sphere3D(QWidget):
     
     def init_dots(self):
         # Point3D.id -> Point3D
-        self.dots = dict()
-        self.dots[0] = helpers.Point3D(0, 'Point_0', QColor('blue'))
+        self.dots = list()
+        self.dots.append(helpers.Point3D(0, 'Point_0', QColor('blue')))
     
     def load(self, calibration):
         print("LOAD")
@@ -597,37 +652,44 @@ class Sphere3D(QWidget):
 
         self.current_image = self.next_image()
 
-        #init dots again
-        self.dots = dict()
-        self.dots[0] = helpers.Point3D(0, 'Point_0', QColor('blue'))
+        self.init_dots()
 
     def delete_dot(self, id):
-        self.dots.pop(id)
-        self.commands_widget.points.load_points(self.dots)
-        self.commands_widget.distance_calculator.load_points(self.dots)
+        self.dots.remove(id)
+        self.update_points()
     
     def reset_dot(self, id):
-        self.dots[id].reset_point()
-        self.commands_widget.points.load_points(self.dots)
-        self.commands_widget.distance_calculator.load_points(self.dots)
+        index = self.dots.index(id)
+        self.dots[index].reset_point()
+        self.update_points()
     
     def change_label(self, id_and_text):
         id, text = id_and_text[0], id_and_text[1]
-        self.dots[id].set_label(text)
-    
-    def update_points(self):
-        self.commands_widget.points.load_points(self.dots)
+        index = self.dots.index(id)
+        self.dots[index].set_label(text)
     
     def change_color(self, id_and_color):
         id, color = id_and_color[0], id_and_color[1]
-        self.dots[id].set_color(color)
+        index = self.dots.index(id)
+        self.dots[index].set_color(color)
         self.update_points()
     
     def add_dot(self):
-        max_id = max(self.dots, default=(-1))+1
-        self.dots[max_id] = helpers.Point3D(max_id, f'Point_{max_id}')
+        max_id = max({i.id for i in self.dots}, default=(-1))+1
+        self.dots.append(helpers.Point3D(max_id, f'Point_{max_id}'))
         self.update_points()
+    
+    def update_index_dot(self, index, id):
+        old_index = self.dots.index(id)
+        
+        dot = self.dots.pop(old_index)
+        self.dots.insert(index, dot)
+        
 
+    def update_points(self):
+        self.commands_widget.points.load_points(self.dots)
+        self.commands_widget.distance_calculator.load_points(self.dots)
+    
     def get_nearest_image(self, pos):
         best_angle = float('inf')
         best_pos = None
@@ -796,7 +858,7 @@ class Sphere3D(QWidget):
         centroid_z = []
         scale_factor = self.commands_widget.distance_calculator.scale_factor
 
-        dots_with_pos = [dot for _,dot in self.dots.items() if dot.get_position() is not None]
+        dots_with_pos = [dot for dot in self.dots if dot.get_position() is not None]
 
         if len(dots_with_pos) == 0:
             print("Export cancelled")
@@ -847,7 +909,7 @@ class Sphere3D(QWidget):
         extrinsics = np.matrix(self.calibration_dict["extrinsics"][self.current_image]["matrix"])
         extrinsics = extrinsics[0:3, 0:4]
 
-        dots = {k:dot.to_tuple(self.current_image, intrinsics, extrinsics, distCoeffs) for k, dot in self.dots.items()}
+        dots = [dot.to_tuple(self.current_image, intrinsics, extrinsics, distCoeffs) for dot in self.dots]
         self.win = show_picture.QImageViewer(f'{self.directory}/{self.current_image}', dots, self.window().geometry())
         self.win.setWindowModality(Qt.WindowModality.ApplicationModal)
         self.win.show()
@@ -860,16 +922,17 @@ class Sphere3D(QWidget):
         distCoeffs = np.matrix(self.calibration_dict["intrinsics"]["distortion matrix"]["matrix"])
 
         for dot in dots:
-            self.dots[dot].add_dot(self.current_image, dots[dot]["dot"])
-            pos = self.estimate_position(self.dots[dot])
+            index = self.dots.index(dot["id"])
+            self.dots[index].add_dot(self.current_image, dot["dot"])
+            pos = self.estimate_position(self.dots[index])
             if pos is not None:
-                self.dots[dot].set_position(pos)
-            if self.dots[dot].get_position() is not None:
-                dot_images = self.dots[dot].get_dots()
+                self.dots[index].set_position(pos)
+            if self.dots[index].get_position() is not None:
+                dot_images = self.dots[index].get_dots()
                 for image in dot_images:
                     if dot_images[image] is None:
                         continue
-                    point = np.matrix([list(self.dots[dot].position)])
+                    point = np.matrix([list(self.dots[index].position)])
                     img_point_1 = np.matrix([dot_images[image].to_array()])
 
                     extrinsics = np.matrix(self.calibration_dict["extrinsics"][image]["matrix"])
@@ -1119,3 +1182,4 @@ class ReconstructionWidget(QWidget):
             self.viewer.set_picture(key)
         except Exception as e:
             pass
+    

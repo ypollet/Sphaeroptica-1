@@ -7,13 +7,13 @@ import sys
 sys.path.append('.')
 
 from PyQt6.QtWidgets import (
-    QMainWindow, QStackedLayout, QWidget, QToolBar, QMenu
+    QMainWindow, QStackedLayout, QWidget
 )
 from PyQt6.QtGui import (
-    QAction, QIcon, QKeyEvent
+    QAction, QIcon
 )
 from PyQt6.QtCore import (
-    QSettings, Qt, pyqtSignal
+    QSettings
 )
 from GUI.reconstruction import ReconstructionWidget
 from GUI.home import HomeWidget
@@ -79,7 +79,6 @@ class MainWindow(QMainWindow):
 
 
     def go_to_calib(self):
-        print("Go_to_calib")
         self.set_widget(Indexes.CAM)
 
     def open_file(self):
@@ -102,5 +101,6 @@ class MainWindow(QMainWindow):
         file_menu = menu.addMenu("Reconst.")
         file_menu.addAction(self.new_action)
         file_menu.addAction(self.open_action)
+    
         
 
