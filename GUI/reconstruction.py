@@ -4,7 +4,6 @@ Copyright Yann Pollet 2023
 
 import math
 import glob
-from PyQt6 import QtGui
 import numpy as np
 import cv2 as cv
 import pandas as pd
@@ -15,22 +14,22 @@ from scripts import helpers, reconstruction
 from GUI import show_picture, import_project
 from collections import deque
 
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QLabel, QWidget, QVBoxLayout, QHBoxLayout, QStackedLayout, QGridLayout,
     QPushButton, QFileDialog, QColorDialog, QSizePolicy, QScrollArea, QLineEdit,
     QComboBox, QCheckBox, QDialog, QDialogButtonBox
 )
-from PyQt6.QtGui import (
+from PySide6.QtGui import (
     QPixmap, QResizeEvent, QMouseEvent, QImage, QPalette, QIcon,
     QPaintEvent, QPainter, QBrush, QColor, QKeyEvent, QDoubleValidator,
-    QDragEnterEvent, QDropEvent, QDragMoveEvent, QDrag)
-from PyQt6.QtCore import Qt, QRect, pyqtSignal, QSettings, QFileInfo, QEvent, QLocale, QMimeData, QSize
+    QDragEnterEvent, QDropEvent, QDrag)
+from PySide6.QtCore import Qt, QRect, Signal, QSettings, QFileInfo, QEvent, QLocale, QMimeData, QSize
 
 
 class _AngleValues(QWidget):
-    clicked = pyqtSignal()
+    clicked = Signal()
     def __init__(self, parent):
-        super(QWidget, self).__init__(parent)
+        super(_AngleValues, self).__init__(parent)
         self._background_color = QColor('white')
         self._text_Color = QColor('black')
         self.setMinimumHeight(50)
@@ -65,10 +64,10 @@ class _AngleValues(QWidget):
         self.clicked.emit()
 
 class PictureButton(QLabel):
-    left_clicked = pyqtSignal(object)
-    right_clicked = pyqtSignal(object)
+    left_clicked = Signal(object)
+    right_clicked = Signal(object)
     def __init__(self, parent, key : helpers.Keys, image : QImage):
-        super(QWidget, self).__init__(parent)
+        super(PictureButton, self).__init__(parent)
         self.setPixmap(image)
         self.key = key
         self.setFixedWidth(helpers.HEIGHT_COMPONENT)
@@ -83,12 +82,13 @@ class PictureButton(QLabel):
             return       
 
 class QColorPixmap(QLabel):
-    color_changed = pyqtSignal(object)
+    color_changed = Signal(object)
     def __init__(self, size, color : QColor):
-        super(QLabel, self).__init__()
+        super(QColorPixmap, self).__init__()
         self.color = color
         pixmap = QPixmap(size, size)
-        pixmap.fill(self.color)
+        print(self.color)
+        pixmap.fill(self.color.value())
         self.setPixmap(pixmap)
 
         self.color_dialog = QColorDialog()
@@ -100,12 +100,13 @@ class QColorPixmap(QLabel):
 
 
 class QPointEntry(QWidget):
-    delete_point = pyqtSignal()
-    reset_point = pyqtSignal()
-    label_changed = pyqtSignal(object)
-    color_changed = pyqtSignal(object)
+    delete_point = Signal()
+    reset_point = Signal()
+    label_changed = Signal(object)
+    color_changed = Signal(object)
+
     def __init__(self, point : helpers.Point3D):
-        super(QWidget, self).__init__()
+        super(QPointEntry, self).__init__()
         layout = QHBoxLayout()
 
         self.drag_button = QLabel()
@@ -167,14 +168,14 @@ class QPointEntry(QWidget):
             drag.exec(Qt.DropAction.MoveAction)
 
 class QPoints(QScrollArea):
-    dot_added = pyqtSignal()
-    delete_dot = pyqtSignal(object)
-    reset_dot = pyqtSignal(object)
-    label_changed = pyqtSignal(object)
-    color_changed = pyqtSignal(object)
+    dot_added = Signal()
+    delete_dot = Signal(object)
+    reset_dot = Signal(object)
+    label_changed = Signal(object)
+    color_changed = Signal(object)
 
     def __init__(self, parent):
-        super().__init__(parent)
+        super(QPoints, self).__init__(parent)
         self.w = QWidget()
         self.add_pt_btn = QPushButton("Add point")
         self.add_pt_btn.setSizePolicy(QSizePolicy.Policy.Expanding,
@@ -275,7 +276,7 @@ class QPoints(QScrollArea):
 
 class DistanceWidget(QWidget):
     def __init__(self, parent):
-        super(QWidget, self).__init__(parent)
+        super(DistanceWidget, self).__init__(parent)
         self.init_settings()
 
         self.full_layout = QVBoxLayout()
@@ -395,15 +396,15 @@ class DistanceWidget(QWidget):
         self.value.setCursorPosition(0)
 
 class CommandsWidget(QWidget):
-    dot_added = pyqtSignal()
-    delete_dot = pyqtSignal(object)
-    reset_dot = pyqtSignal(object)
-    label_changed = pyqtSignal(object)
-    color_changed = pyqtSignal(object)
-    export = pyqtSignal()
+    dot_added = Signal()
+    delete_dot = Signal(object)
+    reset_dot = Signal(object)
+    label_changed = Signal(object)
+    color_changed = Signal(object)
+    export = Signal()
 
     def __init__(self, parent):
-        super(QWidget, self).__init__(parent)
+        super(CommandsWidget, self).__init__(parent)
         self.v_layout = QVBoxLayout()
 
         self.v_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -495,7 +496,7 @@ class CommandsWidget(QWidget):
 
 class Sphere3D(QWidget):
     def __init__(self, calibration : QFileInfo):
-        super(QWidget, self).__init__()
+        super(Sphere3D, self).__init__()
         self.activated = False
         self.last_pos = None
         self._angles_sphere = (0,0) #(180,90)
@@ -565,6 +566,7 @@ class Sphere3D(QWidget):
         # Point3D.id -> Point3D
         self.dots = list()
         self.dots.append(helpers.Point3D(0, 'Point_0', QColor('blue')))
+        QColor('blue').value()
     
     def load(self, calibration):
         print("LOAD")

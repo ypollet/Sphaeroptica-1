@@ -3,11 +3,10 @@ Copyright Yann Pollet 2023
 '''
 
 
-from PyQt6 import QtGui
 import cv2 as cv
-from PyQt6.QtCore import Qt, pyqtSignal, QSettings, QRectF, QRect, QSize
-from PyQt6.QtGui import QImage, QPixmap, QPalette, QPainter, QAction, QMouseEvent, QCloseEvent, QPen, QColor, QKeyEvent, QResizeEvent
-from PyQt6.QtWidgets import (QWidget, QLabel, QSizePolicy, QScrollArea, QMessageBox, QMainWindow, QMenu, QApplication, QScrollBar, QHBoxLayout, 
+from PySide6.QtCore import Qt, Signal, QSettings, QRectF, QRect, QSize
+from PySide6.QtGui import QImage, QPixmap, QPalette, QPainter, QAction, QMouseEvent, QCloseEvent, QPen, QColor, QKeyEvent, QResizeEvent
+from PySide6.QtWidgets import (QWidget, QLabel, QSizePolicy, QScrollArea, QMessageBox, QMainWindow, QMenu, QApplication, QScrollBar, QHBoxLayout, 
                              QVBoxLayout, QPushButton, QSpinBox, QScroller)
 
 from scripts import helpers
@@ -15,9 +14,9 @@ from scripts import helpers
 INIT_POINT_WIDTH = 3
 class QImageLabel(QLabel):
     def __init__(self, parent : QWidget, image : QImage, base_factor : float, dots : list(), point_scale : int):
-        super().__init__(parent)
+        super(QImageLabel, self).__init__(parent)
         self.dots = dots
-        self.visible = {i["id"]:True for i in self.dots}
+        self.visible = [True for i in self.dots]
         self.point_scale = point_scale
         self.scaleFactor = base_factor
         self.image = QPixmap.fromImage(image)
@@ -27,16 +26,16 @@ class QImageLabel(QLabel):
     def set_scale_point(self, val):
         self.point_scale = val
     
-    def set_visible_point(self, id, is_visible):
-        self.visible[id] = is_visible
+    def set_visible_point(self, index, is_visible):
+        self.visible[index] = is_visible
 
     def set_visible_points(self, is_visible):
-        for id in self.visible:
-            self.visible[id] = is_visible
+        for index in range(len(self.visible)):
+            self.visible[index] = is_visible
 
     def points_hidden(self):
-        for id in self.visible:
-            if self.visible[id]:
+        for index in range(len(self.visible)):
+            if self.visible[index]:
                 return False  
         return True
 
@@ -53,11 +52,12 @@ class QImageLabel(QLabel):
         painter = QPainter(canvas)
         pen = QPen()
         pen.setWidth(self.point_scale)
-        for dot in self.dots:     
+        for index in range(len(self.dots)):
+            dot = self.dots[index]
             pen.setColor(dot['color'])
             painter.setPen(pen)
             if(dot["dot"] is None):
-                if not self.visible[dot["id"]]:
+                if not self.visible[index]:
                     continue
                 if dot["position"] is not None:
                     point = dot["position"].scaled(self.scaleFactor)
@@ -100,21 +100,21 @@ class QImageLabel(QLabel):
     
 class QPointButton(QPushButton):
     def __init__(self, label, action : helpers.Action):
-        super(QPushButton, self).__init__(label)
+        super(QPointButton, self).__init__(label)
         self.action = action
 
 
 class QColorPixmap(QLabel):
     def __init__(self, size, color : QColor):
-        super(QLabel, self).__init__()
+        super(QColorPixmap, self).__init__()
         pixmap = QPixmap(size, size)
         pixmap.fill(color)
         self.setPixmap(pixmap)
 
 class QPointButtons(QWidget):
-    button_clicked = pyqtSignal(object)
+    button_clicked = Signal(object)
     def __init__(self, label, color, index):
-        super(QWidget, self).__init__()
+        super(QPointButtons, self).__init__()
         layout = QHBoxLayout()
 
         self.select_button = QPointButton(label, helpers.Action.SELECT)
@@ -153,12 +153,12 @@ class QPointButtons(QWidget):
 
 
 class QPoints(QScrollArea):
-    delete = pyqtSignal(object)
-    showed = pyqtSignal(object)
-    hidden = pyqtSignal(object)
+    delete = Signal(object)
+    showed = Signal(object)
+    hidden = Signal(object)
 
     def __init__(self, points):
-        super().__init__()
+        super(QPoints, self).__init__()
         self.w = QWidget()
         self.vbox = QVBoxLayout()  
         self.vbox.setAlignment(Qt.AlignmentFlag.AlignTop)
@@ -207,12 +207,14 @@ class QPoints(QScrollArea):
             print(f"Delete : {sender_button.index}")
             self.delete_point(sender_button.index)
             return
+
+        # action == helpers.Action.HIDE
         self.show_point(sender_button.visible, sender_button.index)
         
         
 
 class QScalePoint(QWidget):
-    valChanged = pyqtSignal(object)
+    valChanged = Signal(object)
     def __init__(self, parent):
         super(QScalePoint, self).__init__(parent)
 
@@ -243,7 +245,7 @@ class QScalePoint(QWidget):
         self.settings = QSettings("Sphaeroptica", "reconstruction") 
 
 class QHideAll(QWidget):
-    visibleChanged = pyqtSignal(object)
+    visibleChanged = Signal(object)
     def __init__(self, parent):
         super(QHideAll, self).__init__(parent)
         self.init_settings()
@@ -278,9 +280,9 @@ class QHideAll(QWidget):
  
   
 class QImageViewer(QMainWindow):
-    closeSignal = pyqtSignal(object)
+    closeSignal = Signal(object)
     def __init__(self, path_name : str, dots : list, init_geometry : QRect = None):
-        super().__init__()
+        super(QImageViewer, self).__init__()
 
         self.setGeometry(init_geometry)
 

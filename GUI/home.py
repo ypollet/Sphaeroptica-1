@@ -6,12 +6,10 @@ import sys
 
 sys.path.append('..')
 
-from random import randint, seed
-
-from PyQt6.QtWidgets import (
-    QWidget, QHBoxLayout, QVBoxLayout, QFileDialog, QLabel, QPushButton
+from PySide6.QtWidgets import (
+    QWidget, QHBoxLayout, QVBoxLayout, QLabel, QPushButton
 )
-from PyQt6.QtCore import Qt, QRect
+from PySide6.QtCore import Qt
 
 from scripts.helpers import Indexes
 

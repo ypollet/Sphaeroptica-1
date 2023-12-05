@@ -10,11 +10,11 @@ import json
 
 from random import randint, seed
 
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QLabel, QWidget, QVBoxLayout, QHBoxLayout, QSpinBox, QFrame,
-    QPushButton, QFileDialog, QSizePolicy, QLineEdit, QComboBox
+    QPushButton, QFileDialog, QLineEdit, QComboBox
 )
-from PyQt6.QtCore import Qt, QSettings, QRect
+from PySide6.QtCore import Qt, QSettings
 
 from scripts.helpers import Scale
 from scripts.calibration import calibrate
@@ -98,6 +98,8 @@ class _DimensionsWidget(QWidget):
 
         self.dimension_length.setMinimum(0)
         self.dimension_width.setMinimum(0)
+        print(self.camera_calibration_settings.contains("length"))
+        print(self.camera_calibration_settings.value("length"))
         dims = np.array([0,0]) if not self.camera_calibration_settings.contains("dimensions") else self.camera_calibration_settings.value("dimensions")
         self.dimension_length.setValue(dims[0])
         self.dimension_width.setValue(dims[1])

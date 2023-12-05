@@ -1,7 +1,5 @@
-from PyQt6 import QtGui
-from PyQt6.QtCore import pyqtSignal, QSettings, QFileInfo
-from PyQt6.QtGui import QCloseEvent, QKeyEvent
-from PyQt6.QtWidgets import (QWidget, QFileDialog, QDialog, QDialogButtonBox, QVBoxLayout, QLineEdit, QHBoxLayout, QLabel, QPushButton, QCheckBox)
+from PySide6.QtCore import Signal, QSettings, QFileInfo
+from PySide6.QtWidgets import (QWidget, QFileDialog, QDialog, QDialogButtonBox, QVBoxLayout, QLineEdit, QHBoxLayout, QLabel, QPushButton, QCheckBox)
 
 from bs4 import BeautifulSoup
 import numpy as np 
@@ -11,7 +9,7 @@ from scripts import helpers
 
 
 class _DirWidget(QWidget):
-    updated = pyqtSignal(object)
+    updated = Signal(object)
     def __init__(self):
         super(_DirWidget, self).__init__()
         # Choice of Directory
@@ -41,7 +39,7 @@ class _DirWidget(QWidget):
         return str(self.im_dir_edit.text())
 
 class _IntrinsicsWidget(QWidget):
-    updated = pyqtSignal(object)
+    updated = Signal(object)
     def __init__(self, path_img):
         super(_IntrinsicsWidget, self).__init__()
 
@@ -113,7 +111,7 @@ class _IntrinsicsWidget(QWidget):
          self.path = path
 
 class _ExtrinsicsWidget(QWidget):
-    updated = pyqtSignal(object)
+    updated = Signal(object)
     def __init__(self, path_img):
         super(_ExtrinsicsWidget, self).__init__()
         self.path = path_img
@@ -151,7 +149,7 @@ class _ExtrinsicsWidget(QWidget):
          self.path = path
 
 class _ThumbnailsFolderWidget(QHBoxLayout):
-    updated = pyqtSignal(object)
+    updated = Signal(object)
     def __init__(self):
         super(_ThumbnailsFolderWidget, self).__init__()
 
@@ -181,7 +179,7 @@ class _ThumbnailsFolderWidget(QHBoxLayout):
 
 
 class _ThumbnailsWidget(QWidget):
-    updated = pyqtSignal(object)
+    updated = Signal(object)
     def __init__(self):
         super(_ThumbnailsWidget, self).__init__()
         self.full_layout = QVBoxLayout()
@@ -204,7 +202,7 @@ class _ThumbnailsWidget(QWidget):
         self.folder_layout.set_state(self.check_box.isChecked())
 
 class QImportProject(QDialog):
-    closeSignal = pyqtSignal(object)
+    closeSignal = Signal(object)
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Import project")

@@ -6,13 +6,13 @@ import sys
 # setting path
 sys.path.append('.')
 
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QMainWindow, QStackedLayout, QWidget
 )
-from PyQt6.QtGui import (
+from PySide6.QtGui import (
     QAction, QIcon
 )
-from PyQt6.QtCore import (
+from PySide6.QtCore import (
     QSettings
 )
 from GUI.reconstruction import ReconstructionWidget
@@ -25,7 +25,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
 
-        self.init_settings()
+        #self.init_settings()
 
         self.setWindowTitle("Sphaeroptica")
 
@@ -62,7 +62,11 @@ class MainWindow(QMainWindow):
             self.layout.setCurrentIndex(back)
     
     def init_settings(self):
-        self.camera_calibration_settings = QSettings("Sphaeroptica", "camera_calibration")
+        self.settings = QSettings("Sphaeroptica", "camera_calibration")
+        self.settings.clear()
+
+        self.settings = QSettings("Sphaeroptica", "reconstruction")
+        self.settings.clear()
     
     def _create_actions(self):
         self.back_action = QAction(QIcon("icons/arrow-turn-180-left.png"), "Back", self)

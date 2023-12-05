@@ -9,7 +9,7 @@ import sys
 sys.path.append('./GUI')
 
 from typing import Tuple
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QApplication
 )
 
