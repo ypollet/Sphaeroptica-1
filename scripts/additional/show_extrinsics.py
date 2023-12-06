@@ -37,19 +37,14 @@ sys.path.append(os.path.realpath(f"{__file__}/../.."))
 
 
 from matplotlib import pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 import json
 import numpy as np
-from scripts import helpers, reconstruction
+from scripts import converters
 import os
 import argparse
 from pathlib import Path
 
 if __name__ == '__main__':
-
-    #extrinsic_file = open(f"{os.path.expanduser('~')}/Numerisation/Sphaeroptica/lysandra_bellargus/jpegs/ext.json")
-    #extrinsic_file = open(f"{os.path.expanduser('~')}/Numerisation/Sphaeroptica/Sphaeroptica/data/geonemus-geoffroyii/extrinsics.json")
-    #extrinsic_file = open(f"{os.path.expanduser('~')}/Numerisation/Sphaeroptica/lysandra_bellargus/extrinsics.json")
     
     ap = argparse.ArgumentParser()
     ap.add_argument("-i", "--input", required=True,
@@ -74,7 +69,7 @@ if __name__ == '__main__':
         rotation = matrix[0:3,0:3]
         trans = matrix[0:3,3]
 
-        C = helpers.get_camera_world_coordinates(rotation, trans)
+        C = converters.get_camera_world_coordinates(rotation, trans)
         print(C)
         ax.scatter(C.item(0), C.item(1), C.item(2), color="blue")
 

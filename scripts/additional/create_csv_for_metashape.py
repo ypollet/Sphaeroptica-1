@@ -40,9 +40,8 @@ import numpy as np
 import pandas as pd
 import argparse
 from pathlib import Path
-import glob
 
-from scripts import helpers, reconstruction
+from scripts import helpers, reconstruction, converters
 
 if __name__ == '__main__':
 
@@ -91,7 +90,7 @@ if __name__ == '__main__':
 
         rotation = image_ext[0:3, 0:3]
         trans = np.array(image_ext[0:3, 3].T).squeeze()
-        trans_w = np.array(helpers.get_camera_world_coordinates(rotation, trans)).squeeze()
+        trans_w = np.array(converters.get_camera_world_coordinates(rotation, trans)).squeeze()
         dist += reconstruction.get_distance(center, trans_w)
         i += 1
 

@@ -45,7 +45,7 @@ from pathlib import Path
 
 from scipy.spatial.transform import Rotation as R
 
-from scripts import helpers, reconstruction
+from scripts import reconstruction, converters
 
 if __name__ == '__main__':
 
@@ -72,9 +72,9 @@ if __name__ == '__main__':
 
         t_w = np.array([x,y,z])
 
-        omega = helpers.degrees2rad(-row["Omega"])
-        phi = helpers.degrees2rad(-row["Phi"])
-        kappa = helpers.degrees2rad(-row["Kappa"])
+        omega = converters.degrees2rad(-row["Omega"])
+        phi = converters.degrees2rad(-row["Phi"])
+        kappa = converters.degrees2rad(-row["Kappa"])
 
         
         r11 = row["r11"]

@@ -31,11 +31,11 @@
 
 import cv2 as cv
 from PySide6.QtCore import Qt, Signal, QSettings, QRectF, QRect, QSize
-from PySide6.QtGui import QImage, QPixmap, QPalette, QPainter, QAction, QMouseEvent, QCloseEvent, QPen, QColor, QKeyEvent, QResizeEvent
+from PySide6.QtGui import QImage, QPixmap, QPalette, QPainter, QAction, QMouseEvent, QCloseEvent, QPen, QColor, QKeyEvent
 from PySide6.QtWidgets import (QWidget, QLabel, QSizePolicy, QScrollArea, QMessageBox, QMainWindow, QMenu, QApplication, QScrollBar, QHBoxLayout, 
                              QVBoxLayout, QPushButton, QSpinBox, QScroller)
 
-from scripts import helpers
+from scripts import helpers, reconstruction
 
 INIT_POINT_WIDTH = 3
 class QImageLabel(QLabel):

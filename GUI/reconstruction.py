@@ -37,7 +37,7 @@ import pandas as pd
 import os
 import json
 from PIL import Image
-from scripts import helpers, reconstruction
+from scripts import helpers, reconstruction, converters
 from GUI import show_picture, import_project
 from collections import deque
 
@@ -114,8 +114,7 @@ class QColorPixmap(QLabel):
         super(QColorPixmap, self).__init__()
         self.color = color
         pixmap = QPixmap(size, size)
-        print(self.color)
-        pixmap.fill(self.color.value())
+        pixmap.fill(self.color)
         self.setPixmap(pixmap)
 
         self.color_dialog = QColorDialog()
@@ -132,7 +131,7 @@ class QPointEntry(QWidget):
     label_changed = Signal(object)
     color_changed = Signal(object)
 
-    def __init__(self, point : helpers.Point3D):
+    def __init__(self, point : reconstruction.Point3D):
         super(QPointEntry, self).__init__()
         layout = QHBoxLayout()
 
@@ -150,6 +149,7 @@ class QPointEntry(QWidget):
         self.label.editingFinished.connect(self.change_label)
         layout.addWidget(self.label)
 
+        print(f"Point = {point.label}")
         self.color_label = QColorPixmap(self.label.height(), point.get_color())
         layout.addWidget(self.color_label)
         self.color_label.color_changed.connect(self.change_color)
@@ -225,6 +225,8 @@ class QPoints(QScrollArea):
         return super().eventFilter(source, event)
 
     def load_points(self, points):
+
+        print("Load QPoints")
         self.w = QWidget()
         self.vbox = QVBoxLayout()
 
@@ -238,7 +240,7 @@ class QPoints(QScrollArea):
             button.label_changed.connect(self.change_label)
             button.color_changed.connect(self.change_color)
             self.pointbox.addWidget(button)
-        self.hidden_stop = QPointEntry(helpers.Point3D(-1, "hidden"))
+        self.hidden_stop = QPointEntry(reconstruction.Point3D(-1, "hidden"))
         self.hidden_stop.hide()
         self.pointbox.addWidget(self.hidden_stop)
         self.vbox.addLayout(self.pointbox)
@@ -279,6 +281,7 @@ class QPoints(QScrollArea):
 
 
     def dropEvent(self, a0: QDropEvent) -> None:
+        print("Drop")
         pos = a0.position()
         widget = a0.source()
 
@@ -592,7 +595,7 @@ class Sphere3D(QWidget):
     def init_dots(self):
         # Point3D.id -> Point3D
         self.dots = list()
-        self.dots.append(helpers.Point3D(0, 'Point_0', QColor('blue')))
+        self.dots.append(reconstruction.Point3D(0, 'Point_0', QColor('blue')))
         QColor('blue').value()
     
     def load(self, calibration):
@@ -622,7 +625,7 @@ class Sphere3D(QWidget):
 
         cx, cy = intrinsics.item(0,2), intrinsics.item(1,2)
         image_sorted = sorted(images_thumbnails)
-        point = helpers.Point3D(-1, "center")
+        point = reconstruction.Point3D(-1, "center")
         for path in image_sorted:
             file_name = os.path.basename(path)
             if file_name not in self.calibration_dict["extrinsics"]:
@@ -631,7 +634,7 @@ class Sphere3D(QWidget):
             mat = np.matrix(self.calibration_dict["extrinsics"][file_name]["matrix"])
             rotation = mat[0:3, 0:3]
             trans = mat[0:3, 3]
-            C = helpers.get_camera_world_coordinates(rotation, trans)
+            C = converters.get_camera_world_coordinates(rotation, trans)
             point.add_dot(file_name, helpers.Point(cx, cy))
 
             image_calibration[file_name] = C
@@ -663,9 +666,9 @@ class Sphere3D(QWidget):
             # add long, lat to key
             C = image_calibration[file_name]
             vec = C - self.center
-            longitude, latitude = helpers.get_long_lat(vec)
+            longitude, latitude = converters.get_long_lat(vec)
             key = (longitude, latitude) 
-            lat_deg = int(helpers.rad2degrees(latitude))+1
+            lat_deg = int(converters.rad2degrees(latitude))+1
             if lat_deg < self.lowest_lat :
                 self.lowest_lat = lat_deg
             if lat_deg > self.highest_lat :
@@ -705,7 +708,7 @@ class Sphere3D(QWidget):
     
     def add_dot(self):
         max_id = max({i.id for i in self.dots}, default=(-1))+1
-        self.dots.append(helpers.Point3D(max_id, f'Point_{max_id}'))
+        self.dots.append(reconstruction.Point3D(max_id, f'Point_{max_id}'))
         self.update_points()
     
     def update_index_dot(self, index, id):
@@ -722,7 +725,7 @@ class Sphere3D(QWidget):
     def get_nearest_image(self, pos):
         best_angle = float('inf')
         best_pos = None
-        rad_pos = (helpers.degrees2rad(pos[0]), helpers.degrees2rad(pos[1]))
+        rad_pos = (converters.degrees2rad(pos[0]), converters.degrees2rad(pos[1]))
         for img_pos in self.images.keys():
             sinus = math.sin(img_pos[1]) * math.sin(rad_pos[1])
             cosinus = math.cos(img_pos[1]) * math.cos(rad_pos[1])* math.cos(abs(img_pos[0]-rad_pos[0]))
@@ -757,29 +760,24 @@ class Sphere3D(QWidget):
     def virtual_camera_extrinsics(self, extrinsics):
         rotation = extrinsics[0:3, 0:3]
         trans = extrinsics[0:3, 3]
-        C = helpers.get_camera_world_coordinates(rotation, trans)
+        C = converters.get_camera_world_coordinates(rotation, trans)
 
         dist = reconstruction.get_distance(self.center, C)
 
         long, lat = self._angles_sphere
-        long, lat = helpers.degrees2rad(long), helpers.degrees2rad(lat)
-        long_img, lat_img = helpers.get_long_lat(C-self.center)
-        
-        delta_long = long - long_img
-        delta_lat = lat - lat_img
+        long, lat = converters.degrees2rad(long), converters.degrees2rad(lat)
+        long_img, lat_img = converters.get_long_lat(C-self.center)
 
-        direction_vector = helpers.get_unit_vector_from_long_lat(long, lat)
+        direction_vector = converters.get_unit_vector_from_long_lat(long, lat)
         dist_vec = direction_vector * dist 
         C_new = np.transpose(dist_vec) + self.center
 
         z = direction_vector / np.linalg.norm(direction_vector)
         x,y,z = direction_vector.item(0),direction_vector.item(1),direction_vector.item(2)
-        omega = math.asin(-y)
-        phi = math.atan2(math.sqrt(x*x + y*y),z)
 
         rotation_new = reconstruction.rotate_x_axis(lat) @ reconstruction.rotate_y_axis(long) @ reconstruction.rotate_z_axis(math.radians(-90)) @ reconstruction.rotate_y_axis(math.radians(90)) 
         
-        trans_new = helpers.get_trans_vector(rotation_new, C_new).T
+        trans_new = converters.get_trans_vector(rotation_new, C_new).T
 
         return np.hstack((rotation_new, trans_new))
 
@@ -787,7 +785,7 @@ class Sphere3D(QWidget):
     def homography(self, ext_src, ext_dst):
         rotation = ext_src[0:3, 0:3]
         trans = ext_src[0:3, 3]
-        C = helpers.get_camera_world_coordinates(rotation, trans)
+        C = converters.get_camera_world_coordinates(rotation, trans)
 
         middle_x = int(self.thumb_w/2)
         middle_y = int(self.thumb_h/2)
@@ -974,11 +972,11 @@ class Sphere3D(QWidget):
         if nbr_img != 0:
             print(f"total error: {mean_error/nbr_img}")
         
-        self.commands_widget.distance_calculator.load_points(self.dots)
+        self.update_points()
 
         
     
-    def estimate_position(self, point: helpers.Point3D):
+    def estimate_position(self, point: reconstruction.Point3D):
         dots_no_None = {k:v for (k,v) in point.dots.items() if v is not None}
 
         if len(dots_no_None) <2 :

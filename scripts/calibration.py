@@ -37,6 +37,18 @@ import imutils
 
 
 def calibrate(dir_path : str, dims : np.ndarray, sizes : np.ndarray):
+    """Calibrates a series of pictures containing a Zhang pattern
+
+    Args:
+        dir_path (str): path of directory containing the pictures
+        dims (np.ndarray): Dimension of Zhang pattern
+        sizes (np.ndarray): length and width of the rectangles
+
+    Returns:
+        np.ndarray: intrinsic matrix
+        np.ndarray: distortion coefficients
+        dict: extrinsic matrix per picture
+    """
     # termination criteria
     criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
     # prepare object points, like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
