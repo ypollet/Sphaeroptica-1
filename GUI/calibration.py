@@ -47,6 +47,9 @@ from scripts.helpers import Scale
 from scripts.calibration import calibrate
 
 class _DirWidget(QWidget):
+    """_Widget asking for the directory containing the images to calibrate
+    """
+
     def __init__(self,parent):
         super(_DirWidget, self).__init__(parent)
         self.parent = parent
@@ -77,6 +80,8 @@ class _DirWidget(QWidget):
         return str(self.cal_dir_edit.text())
 
 class CheckboardDimensionsWidget(QWidget):
+    """Widget containing the dimension info of the pattern (number of rectangles + their lengths and width)
+    """
 
     def __init__(self, parent):
         super(CheckboardDimensionsWidget, self).__init__(parent)
@@ -111,6 +116,8 @@ class CheckboardDimensionsWidget(QWidget):
         self.camera_calibration_settings = QSettings("Sphaeroptica", "camera_calibration")
 
 class _DimensionsWidget(QWidget):
+    """Dimension of the pattern
+    """
 
     def __init__(self, parent):
         super(_DimensionsWidget, self).__init__(parent)
@@ -149,6 +156,9 @@ class _DimensionsWidget(QWidget):
 
 
 class _SizeWidget(QWidget):
+    """Widget to get the size of the rectangle
+    """
+
     def __init__(self, parent, label):
         super(_SizeWidget, self).__init__(parent)
         self.init_settings()
@@ -171,6 +181,8 @@ class _SizeWidget(QWidget):
         self.camera_calibration_settings = QSettings("Sphaeroptica", "camera_calibration")
 
 class _ResultsWidget(QWidget):
+    """Widget that displays the camera matrix and distortion matrix after calibration
+    """
 
     def __init__(self, parent):
         super(_ResultsWidget, self).__init__(parent)
@@ -198,6 +210,8 @@ class _ResultsWidget(QWidget):
         self.dis_matrix.setText(dis_matrix)
    
 class CalibrationWidget(QWidget):
+    """Main Widget
+    """
 
     def __init__(self, parent):
         super(CalibrationWidget, self).__init__(parent)
@@ -220,20 +234,16 @@ class CalibrationWidget(QWidget):
         self.get_dir = _DirWidget(self)
         full_layout.addWidget(self.get_dir)
 
-        # add dimensions of checkboard
         self.dim_check = CheckboardDimensionsWidget(self)
         full_layout.addWidget(self.dim_check)
-
-        # Add button save
 
         self.calibrate_button = QPushButton("Calibrate Scanner", self)
         self.calibrate_button.clicked.connect(self.on_calibrate)
         full_layout.addWidget(self.calibrate_button)
 
-        
-        #add 
         self.results = _ResultsWidget(self)
         self.results.hide()
+
         self.save_button = QPushButton("Save", self)
         self.save_button.clicked.connect(self.on_save)
         self.save_button.hide()
@@ -246,36 +256,43 @@ class CalibrationWidget(QWidget):
         self.setLayout(full_layout)
 
     def init_settings(self):
+        """Initialize QSettings to get persistent application settings
+        """
         self.camera_calibration_settings = QSettings("Sphaeroptica", "camera_calibration")
         
     def on_calibrate(self):
+        """Calibration process
+        """
+
+        #get the values set on the form
         dir_name = self.get_dir.get_value()
         dimensions, length, width, scale = self.dim_check.get_values()
 
+        # Save calibration settings on the system
         self.camera_calibration_settings.setValue("directory", dir_name)
         self.camera_calibration_settings.setValue("dimensions", dimensions)
         self.camera_calibration_settings.setValue("length", length)
         self.camera_calibration_settings.setValue("width", width)
         self.camera_calibration_settings.setValue("scale", scale)
 
+        #calibrate the images
         cam_matrix, dist_matrix, ext = calibrate(dir_name, dimensions, np.array([length*scale.value, width*scale.value]))
 
+        #Update ResultsWidget
         self.results.update_results(str(cam_matrix), str(dist_matrix))
         self.cam_matrix = cam_matrix
         self.dist_matrix = dist_matrix
         self.extrinsics = ext
 
+        #Show ResultsWidget and SaveButton
         self.results.show()
         self.save_button.show()
 
     def on_save(self):
+        """Save calibration values on a json file
+        """
         file_name = QFileDialog.getSaveFileName(self, "Save Calibration File", self.get_dir.get_value()+"/.json","Json Files (*.json)")
 
-        dict = self.camera_calibration_settings.value("directory")
-        dimensions = self.camera_calibration_settings.value("dimensions")
-        length = self.camera_calibration_settings.value("length")
-        width = self.camera_calibration_settings.value("width")
-        scale = self.camera_calibration_settings.value("scale")
         json_dict = {
             "intrinsics":{
                 "camera matrix" : {

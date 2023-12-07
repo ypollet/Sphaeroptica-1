@@ -41,6 +41,8 @@ from PySide6.QtCore import Qt
 from scripts.helpers import Indexes
 
 class HomeWidget(QWidget):
+    """Home page
+    """
 
     def __init__(self, parent):
         super(HomeWidget, self).__init__(parent)
