@@ -270,12 +270,6 @@ class CalibrationWidget(QWidget):
 
     def on_save(self):
         file_name = QFileDialog.getSaveFileName(self, "Save Calibration File", self.get_dir.get_value()+"/.json","Json Files (*.json)")
-
-        dict = self.camera_calibration_settings.value("directory")
-        dimensions = self.camera_calibration_settings.value("dimensions")
-        length = self.camera_calibration_settings.value("length")
-        width = self.camera_calibration_settings.value("width")
-        scale = self.camera_calibration_settings.value("scale")
         json_dict = {
             "intrinsics":{
                 "camera matrix" : {

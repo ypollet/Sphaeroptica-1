@@ -54,6 +54,9 @@ from PySide6.QtCore import Qt, QRect, Signal, QSettings, QFileInfo, QEvent, QLoc
 
 
 class _AngleValues(QWidget):
+    """Widget displaying the geographic value of the position of the virtual camera
+    """
+
     clicked = Signal()
     def __init__(self, parent):
         super(_AngleValues, self).__init__(parent)
@@ -91,6 +94,9 @@ class _AngleValues(QWidget):
         self.clicked.emit()
 
 class PictureButton(QLabel):
+    """Widget for positional shortcut (front, back ...)
+    """
+
     left_clicked = Signal(object)
     right_clicked = Signal(object)
     def __init__(self, parent, key : helpers.Keys, image : QImage):
@@ -101,14 +107,24 @@ class PictureButton(QLabel):
         self.setFixedHeight(helpers.HEIGHT_COMPONENT)
     
     def mousePressEvent(self, a0: QMouseEvent) -> None:
+        """_summary_
+
+        Args:
+            a0 (QMouseEvent): _description_
+        """
         if a0.button() == Qt.MouseButton.LeftButton :
+            #go to shortcutted image
             self.left_clicked.emit(self.key)
             return
         if a0.button() == Qt.MouseButton.RightButton :
+            #set that image as shortcut
             self.right_clicked.emit(self.key)
             return       
 
 class QColorPixmap(QLabel):
+    """Widget that show the referenced color for a point
+    """
+
     color_changed = Signal(object)
     def __init__(self, size, color : QColor):
         super(QColorPixmap, self).__init__()
@@ -120,12 +136,20 @@ class QColorPixmap(QLabel):
         self.color_dialog = QColorDialog()
     
     def mousePressEvent(self, ev: QMouseEvent) -> None:
+        """Show a ColorDialog to select a new color for the point
+
+        Args:
+            ev (QMouseEvent): Mouse Event
+        """
         color = self.color_dialog.getColor(self.color)
         if color.isValid():
             self.color_changed.emit(color)
 
 
 class QPointEntry(QWidget):
+    """Entry in the list of points
+    """
+
     delete_point = Signal()
     reset_point = Signal()
     label_changed = Signal(object)
@@ -149,7 +173,6 @@ class QPointEntry(QWidget):
         self.label.editingFinished.connect(self.change_label)
         layout.addWidget(self.label)
 
-        print(f"Point = {point.label}")
         self.color_label = QColorPixmap(self.label.height(), point.get_color())
         layout.addWidget(self.color_label)
         self.color_label.color_changed.connect(self.change_color)
@@ -170,19 +193,43 @@ class QPointEntry(QWidget):
         self.setLayout(layout)
     
     def delete(self):
+        """Delete Entry
+        TODO : Use a ModelView architecture for points
+        """
+
         self.delete_point.emit()
     
     def reset(self):
+        """Remove all landmarks and 3D position 
+        TODO : Use a ModelView architecture for points
+        """
+
         self.reset_point.emit()
     
     def change_color(self, color):
+        """Change color of point
+        TODO : Use a ModelView architecture for points
+
+        Args:
+            color (QColor): new color
+        """
+
         self.color_changed.emit(color)
 
     def change_label(self):
+        """edit the label of the point
+        TODO : Use a ModelView architecture for points
+        """
+
         self.label.clearFocus()
         self.label_changed.emit(self.label.text())
 
     def mouseMoveEvent(self, e):
+        """Drag of Qpoints
+
+        Args:
+            e (QMouseEvent): event
+        """
         print(f"Drag button {self.id}")
         if e.buttons() == Qt.MouseButton.LeftButton:
             drag = QDrag(self)
@@ -195,6 +242,8 @@ class QPointEntry(QWidget):
             drag.exec(Qt.DropAction.MoveAction)
 
 class QPoints(QScrollArea):
+    """ScrollArea containing the list of QPointsEntry
+    """
     dot_added = Signal()
     delete_dot = Signal(object)
     reset_dot = Signal(object)
@@ -225,8 +274,12 @@ class QPoints(QScrollArea):
         return super().eventFilter(source, event)
 
     def load_points(self, points):
+        """Load each point to the list
 
-        print("Load QPoints")
+        Args:
+            points (list): list of points
+        """
+
         self.w = QWidget()
         self.vbox = QVBoxLayout()
 
@@ -240,9 +293,7 @@ class QPoints(QScrollArea):
             button.label_changed.connect(self.change_label)
             button.color_changed.connect(self.change_color)
             self.pointbox.addWidget(button)
-        self.hidden_stop = QPointEntry(reconstruction.Point3D(-1, "hidden"))
-        self.hidden_stop.hide()
-        self.pointbox.addWidget(self.hidden_stop)
+        
         self.vbox.addLayout(self.pointbox)
         self.vbox.addWidget(self.add_pt_btn)
         self.w.setLayout(self.vbox)
@@ -252,36 +303,67 @@ class QPoints(QScrollArea):
         self.setAcceptDrops(True)
     
     def delete_point(self):
+        """Sends a signal to delete point
+        TODO : Use a ModelView architecture for points
+        """
+
         sender_button = self.sender()
         id = sender_button.id
         self.delete_dot.emit(id)
     
     def reset_point(self):
+        """Sends a signal to reset point
+        TODO : Use a ModelView architecture for points
+        """
+        
         sender_button = self.sender()
         id = sender_button.id
         self.reset_dot.emit(id)
 
     def add_dot(self):
+        """Sends a signal to add a new point
+        TODO : Use a ModelView architecture for points
+        """
+
         self.dot_added.emit()
 
     def change_label(self, text):
+        """Sends a signal to change the label of the point
+        TODO : Use a ModelView architecture for points
+        """
+
         sender_button = self.sender()
         id = sender_button.id
         self.label_changed.emit([id, text])
     
     def change_color(self, color):
+        """Sends a signal to change the color of the point
+        TODO : Use a ModelView architecture for points
+        """
+
         sender_button = self.sender()
         id = sender_button.id
         self.color_changed.emit([id, color])
     
     def dragEnterEvent(self, a0: QDragEnterEvent) -> None:
-        print("Drag Points")
+        """Autorizes drag event
+
+        Args:
+            a0 (QDragEnterEvent): Drag Event
+        """
+
         self.original_pos = a0.position()
         a0.accept()
 
 
     def dropEvent(self, a0: QDropEvent) -> None:
-        print("Drop")
+        """Authorize drop event and change list of points
+        Add the dragged point over the first point it isn't under
+
+        Args:
+            a0 (QDragEnterEvent): Drag Event
+        """
+
         pos = a0.position()
         widget = a0.source()
 
@@ -289,7 +371,8 @@ class QPoints(QScrollArea):
 
         last = self.pointbox.itemAt(self.pointbox.count()-1).widget()
         if pos.y() > last.y() + last.size().height() // 2:
-            self.window().rec.viewer.update_index_dot(self.pointbox.count()-2, widget.id)
+            # The drag went under the last widget of the list
+            self.window().rec.viewer.move_dot(self.pointbox.count()-1, widget.id)
         else:
             for n in range(self.pointbox.count()):
                 # Get the widget at each index in turn.
@@ -298,13 +381,16 @@ class QPoints(QScrollArea):
                 if pos.y() < w.y() + w.size().height() // 2:
                     # We didn't drag past this widget.
                     # insert to the left of it.
-                    self.window().rec.viewer.update_index_dot(n-1 if desc else n, widget.id)
+                    self.window().rec.viewer.move_dot(n-1 if desc else n, widget.id)
                     break
         self.window().rec.viewer.update_points()
         a0.accept()
 
 
 class DistanceWidget(QWidget):
+    """Widget that show the distance between two chosen points
+    """
+
     def __init__(self, parent):
         super(DistanceWidget, self).__init__(parent)
         self.init_settings()
@@ -364,13 +450,22 @@ class DistanceWidget(QWidget):
         self.setLayout(self.full_layout)
     
     def init_settings(self):
+        """Get QSettings to get persistent data
+        """
+
         self.reconstruction_settings = QSettings("Sphaeroptica", "reconstruction")
     
     def update_scale_settings(self):
+        """Update scale of the distance (M, CM or MM)
+        """
+
         print(f"current text scale : {helpers.Scale[str(self.scale_widget.currentText())]}")
         self.reconstruction_settings.setValue("scale", helpers.Scale[str(self.scale_widget.currentText())])
     
     def update_scale(self):
+        """Update scale factor
+        """
+
         if self.original_value == 0.0:
             self.value.setText("0.0")
             print("Impossible to update scale from a nul value")
@@ -382,11 +477,20 @@ class DistanceWidget(QWidget):
         print(f"Scale factor set at {self.scale_factor}")
     
     def reset_scale_factor(self):
+        """Reset scale factor to 1
+        """
+
         self.scale_factor = 1.0
         print("Scale factor reset")
         self.update_dist()
 
     def load_points(self, points):
+        """Load each point that has a 3D position to the widget
+
+        Args:
+            points (list): list of points
+        """
+
         self.points = list()
         self.points.append(None)
         left_index = self.left.currentIndex()
@@ -417,6 +521,9 @@ class DistanceWidget(QWidget):
             self.right.setCurrentIndex(0)
 
     def update_dist(self):
+        """Computes the distance between two points and updates the widget
+        """
+
         if self.left.currentIndex() <= 0 or self.right.currentIndex() <= 0:
             self.value.setText("0.0")
             self.original_value = 0.0
@@ -426,6 +533,9 @@ class DistanceWidget(QWidget):
         self.value.setCursorPosition(0)
 
 class CommandsWidget(QWidget):
+    """Right side of the window, Widget containing everything, shortcuts, points and distance
+    """
+
     dot_added = Signal()
     delete_dot = Signal(object)
     reset_dot = Signal(object)
@@ -525,6 +635,9 @@ class CommandsWidget(QWidget):
         self.export.emit()
 
 class Sphere3D(QWidget):
+    """Left Size of the Window, Virtual Camera + Angle Values
+    """
+
     def __init__(self, calibration : QFileInfo):
         super(Sphere3D, self).__init__()
         self.activated = False
@@ -533,8 +646,6 @@ class Sphere3D(QWidget):
         self._old_angles = (0,0)
 
         self.init_dots()
-
-        self.counter = 0
 
         # inverse
         self.move_from_arrow = {
@@ -555,6 +666,7 @@ class Sphere3D(QWidget):
         self.current_image = None
 
         if calibration is not None:
+            #load last calibration file used
             self.load(calibration)
         
         self.sphere.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
@@ -593,18 +705,29 @@ class Sphere3D(QWidget):
         self.setContentsMargins(0,0,0,0)
     
     def init_dots(self):
+        """Creates the first dot when we open the app
+        """
+         
         # Point3D.id -> Point3D
         self.dots = list()
         self.dots.append(reconstruction.Point3D(0, 'Point_0', QColor('blue')))
         QColor('blue').value()
     
-    def load(self, calibration):
+    def load(self, calibration : QFileInfo):
+        """load a calibration file into the project
+
+        Args:
+            calibration (QFileInfo): calibration file
+        """
+
         print("LOAD")
         self.images = {}
         self.directory = calibration.absolutePath()
         self.calibration_file = calibration.fileName()
         self.current_image = None
         images_thumbnails = None
+
+        #Load the calibration file as a dict
         with open(f'{self.directory}/{self.calibration_file}', "r") as f:
             self.calibration_dict = json.load(f)
             self.thumbnails = self.calibration_dict["thumbnails"]
@@ -622,14 +745,15 @@ class Sphere3D(QWidget):
 
         factor_mat = np.matrix([[factor, 0, 0],[0, second_factor, 0],[0,0,1]])
         self.intrinsics_thumbnails = factor_mat @ np.matrix(self.calibration_dict["intrinsics"]["camera matrix"]["matrix"])
-
+        
+        #Compute an approximately estimated center of the sphere of images
         cx, cy = intrinsics.item(0,2), intrinsics.item(1,2)
         image_sorted = sorted(images_thumbnails)
         point = reconstruction.Point3D(-1, "center")
         for path in image_sorted:
             file_name = os.path.basename(path)
             if file_name not in self.calibration_dict["extrinsics"]:
-                #this checks if it's an image and if it's calibrated
+                #checks if it's an image and if it's calibrated
                 continue
             mat = np.matrix(self.calibration_dict["extrinsics"][file_name]["matrix"])
             rotation = mat[0:3, 0:3]
@@ -651,8 +775,8 @@ class Sphere3D(QWidget):
         self.lowest_lat = float('inf')
         self.highest_lat = -float('inf')
         for file_name in keys:
-            # compute error
             
+            # compute error of the estimated center (can be high) 
             pos = np.matrix([list(point.position)])
             img_point_1 = np.matrix([point.get_image_dots(file_name).to_array()])
 
@@ -663,7 +787,7 @@ class Sphere3D(QWidget):
             mean_error += error
             nbr_img += 1
 
-            # add long, lat to key
+            # compute geographic coordinates and use them as key for the virtual camera
             C = image_calibration[file_name]
             vec = C - self.center
             longitude, latitude = converters.get_long_lat(vec)
@@ -687,31 +811,66 @@ class Sphere3D(QWidget):
         self.init_dots()
 
     def delete_dot(self, id):
+        """Deletes dot
+        TODO : Use a ModelView architecture for points
+        Args:
+            id (int): Id of the dot to delete
+        """
+
         self.dots.remove(id)
         self.update_points()
     
     def reset_dot(self, id):
+        """Resets dot
+        TODO : Use a ModelView architecture for points
+        Args:
+            id (int): Id of the dot to delete
+        """
+
         index = self.dots.index(id)
         self.dots[index].reset_point()
         self.update_points()
     
     def change_label(self, id_and_text):
+        """Change the label of the point
+        TODO : Use a ModelView architecture for points
+        Args:
+            id_and_text (tuple(int, string)): id, new label
+        """
+
         id, text = id_and_text[0], id_and_text[1]
         index = self.dots.index(id)
         self.dots[index].set_label(text)
     
     def change_color(self, id_and_color):
+        """Change the coloe of the point
+        TODO : Use a ModelView architecture for points
+        Args:
+            id_and_text (tuple(int, Qcolor)): id, new coloe
+        """
+
         id, color = id_and_color[0], id_and_color[1]
         index = self.dots.index(id)
         self.dots[index].set_color(color)
         self.update_points()
     
     def add_dot(self):
+        """Add new point to the list
+        TODO : Use a ModelView architecture for points
+        """
+
         max_id = max({i.id for i in self.dots}, default=(-1))+1
         self.dots.append(reconstruction.Point3D(max_id, f'Point_{max_id}'))
         self.update_points()
     
-    def update_index_dot(self, index, id):
+    def move_dot(self, index, id):
+        """move dot to new index 
+
+        Args:
+            index (int): new index
+            id (int): id of point
+        """
+
         old_index = self.dots.index(id)
         
         dot = self.dots.pop(old_index)
@@ -719,10 +878,22 @@ class Sphere3D(QWidget):
         
 
     def update_points(self):
+        """Update QPointsWidget and DistanceWidget
+        """
+
         self.commands_widget.points.load_points(self.dots)
         self.commands_widget.distance_calculator.load_points(self.dots)
     
     def get_nearest_image(self, pos):
+        """gets the 
+
+        Args:
+            pos (np.array): the position of the virtual camera (longitude and latitude)
+
+        Returns:
+            string: the image path
+        """
+
         best_angle = float('inf')
         best_pos = None
         rad_pos = (converters.degrees2rad(pos[0]), converters.degrees2rad(pos[1]))
@@ -736,9 +907,14 @@ class Sphere3D(QWidget):
         return self.images[best_pos]
     
     def next_image(self):
-        
+        """Updates the image on the sphere
+        """
+
         self.current_image = self.get_nearest_image(self._angles_sphere)
-        '''extrinsics = np.matrix(self.calibration_dict["extrinsics"][self.current_image]["matrix"])[0:3, 0:4]
+        
+        '''
+        # DEPRECATED Computes the homography matrix for the virtual camera
+        extrinsics = np.matrix(self.calibration_dict["extrinsics"][self.current_image]["matrix"])[0:3, 0:4]
         extrinsics_dst = self.virtual_camera_extrinsics(extrinsics)
         homography_image = self.homography(extrinsics, extrinsics_dst)
 
@@ -753,11 +929,21 @@ class Sphere3D(QWidget):
         qImg = QImage(new_image.data, width, height, bytesPerLine, QImage.Format.Format_RGBA8888)
 
         pixmap = QPixmap.fromImage(qImg)'''
+
         pixmap = QPixmap(f'{self.directory}/{self.thumbnails}/{self.current_image}')
         pixmap = pixmap.scaled(self.sphere.height(), self.sphere.width(), Qt.AspectRatioMode.KeepAspectRatio)
         self.sphere.setPixmap(pixmap)
 
     def virtual_camera_extrinsics(self, extrinsics):
+        """Deprecated Computes the virtual camera extrinsics
+
+        Args:
+            extrinsics (np.ndarray): extrinsic matrix of the nearest image
+
+        Returns:
+            np.ndarray: extrinsic matrix of the virtual camera
+        """
+
         rotation = extrinsics[0:3, 0:3]
         trans = extrinsics[0:3, 3]
         C = converters.get_camera_world_coordinates(rotation, trans)
@@ -766,14 +952,10 @@ class Sphere3D(QWidget):
 
         long, lat = self._angles_sphere
         long, lat = converters.degrees2rad(long), converters.degrees2rad(lat)
-        long_img, lat_img = converters.get_long_lat(C-self.center)
 
         direction_vector = converters.get_unit_vector_from_long_lat(long, lat)
         dist_vec = direction_vector * dist 
         C_new = np.transpose(dist_vec) + self.center
-
-        z = direction_vector / np.linalg.norm(direction_vector)
-        x,y,z = direction_vector.item(0),direction_vector.item(1),direction_vector.item(2)
 
         rotation_new = reconstruction.rotate_x_axis(lat) @ reconstruction.rotate_y_axis(long) @ reconstruction.rotate_z_axis(math.radians(-90)) @ reconstruction.rotate_y_axis(math.radians(90)) 
         
@@ -783,6 +965,16 @@ class Sphere3D(QWidget):
 
 
     def homography(self, ext_src, ext_dst):
+        """Deprecated Computes the homography matrix
+
+        Args:
+            ext_src (np.ndarray): extrinsic matrix of source image
+            ext_dst (np.ndarray): extrinsic matrix of virtual camera
+
+        Returns:
+            np.ndarray: homography matrix
+        """
+
         rotation = ext_src[0:3, 0:3]
         trans = ext_src[0:3, 3]
         C = converters.get_camera_world_coordinates(rotation, trans)
@@ -819,10 +1011,31 @@ class Sphere3D(QWidget):
 
     # to refactor in utils
     def get_next_angle(self, old_angle, move, min, max):
+        """Increment/decrement angle and go back to min if angle+move > max
+
+        Args:
+            old_angle (int): _description_
+            move (int): the angle to add
+            min (int): minimum angle allowed
+            max (int): maximum angle allowed
+
+        Returns:
+            int: next angle 
+        """
+
         difference = max - min
         return ((difference + old_angle-min - move) % difference) + min
 
     def get_new_angle(self, new_pos):
+        """Compute new postion of the virtual camera
+
+        Args:
+            new_pos (QPoint): position of the mouse
+
+        Returns:
+            tuple(int, int): new longitude and latitude angles
+        """
+        
         #horizontal -180 -> 179, vertical -90 -> 90
         x = self.get_next_angle(self._old_angles[0], int((new_pos.x() - self.last_pos.x())/2), -180, 180)
         # ((360 + self._old_angles[0]+180 + int((self.last_pos.x()-new_pos.x())/2)) % 360) - 180 # +180 to go back to 0-359 and -180 at the end
@@ -831,6 +1044,12 @@ class Sphere3D(QWidget):
         return (x,y)
         
     def move_arrow(self, key: helpers.Arrows):
+        """Move the virtual camera by using your key arrows
+
+        Args:
+            key (helpers.Arrows): key that has been pressed + the corresponding move
+        """
+
         move = self.move_from_arrow[key.value]
         x = self.get_next_angle(self._old_angles[0], move[0], -180, 180)
         y = max(self.lowest_lat, min((self._old_angles[1] + move[1]), self.highest_lat))
@@ -840,17 +1059,35 @@ class Sphere3D(QWidget):
         self._old_angles = (self._angles_sphere[0], self._angles_sphere[1])
 
     def set_picture(self, key: helpers.Keys):
+        """set shortcut picture
+
+        Args:
+            key (helpers.Keys): key pressed
+        """
+
         self.calibration_dict["commands"][key.name] = self._angles_sphere
         with open(f"{self.directory}/{self.calibration_file}", "w") as f_to_write:
             json.dump(self.calibration_dict, f_to_write)
 
     def change_picture(self, key: helpers.Keys):
+        """Move to the shortcut picture asked
+
+        Args:
+            key (helpers.Keys): key pressed
+        """
+
         self._angles_sphere = self.calibration_dict["commands"][key.name]
         self._sphere_values._trigger_refresh()
         self.next_image()
         self._old_angles = (self._angles_sphere[0], self._angles_sphere[1])
 
     def mouseMoveEvent(self, ev: QMouseEvent) -> None:
+        """MouseEvent to move the virtual camera
+
+        Args:
+            ev (QMouseEvent): event
+        """
+
         new_pos = ev.pos()
         if self.activated:
             self._angles_sphere = self.get_new_angle(new_pos)
@@ -858,16 +1095,34 @@ class Sphere3D(QWidget):
             self.next_image()
     
     def mousePressEvent(self, ev: QMouseEvent) -> None:
+        """Start MouseEvent Process
+
+        Args:
+            ev (QMouseEvent): event
+        """
+
         self.activated = True
         self.last_pos = ev.pos()
         self._old_angles = (self._angles_sphere[0], self._angles_sphere[1])
 
     def mouseReleaseEvent(self, ev: QMouseEvent) -> None:
+        """MouseEvent stop process
+
+        Args:
+            ev (QMouseEvent): event
+        """
+
         self.activated = False
         self.last_pos = None
         self._old_angles = (self._angles_sphere[0], self._angles_sphere[1])
     
     def resizeEvent(self, a0: QResizeEvent) -> None:
+        """When resizing the window, resize the image
+
+        Args:
+            a0 (QResizeEvent): event
+        """
+
         try:
             self.current_image = self.get_nearest_image(self._angles_sphere)
             pixmap = QPixmap(f'{self.directory}/{self.thumbnails}/{self.current_image}')
@@ -878,6 +1133,9 @@ class Sphere3D(QWidget):
             pass
 
     def export(self):
+        """Export points into a csv
+        """
+
         df = pd.DataFrame(columns=["Color", "X", "Y", "Z", "X_adjusted", "Y_adjusted", "Z_adjusted"])
         df.rename_axis("Label")
         centroid_x = []
@@ -891,7 +1149,7 @@ class Sphere3D(QWidget):
             print("Export cancelled")
             return
 
-
+        # QDialog to get list of points use to compute the centroid
         list_dots_centroid = self.get_list_dots_for_centroid(dots_with_pos)
 
         if list_dots_centroid is None:
@@ -913,8 +1171,17 @@ class Sphere3D(QWidget):
         if len(export_file_name.strip()) != 0:
             df.to_csv(export_file_name, index=True, index_label="Label", sep="\t")
     
-    def get_list_dots_for_centroid(self, dots_with_pos):
-        msg = CentroidMessage(dots_with_pos)
+    def get_list_dots_for_centroid(self, points_with_pos):
+        """Launch Dialog to have the list of points that will count to compute the centroid
+
+        Args:
+            points_with_pos (list): list of points that have a position
+
+        Returns:
+            set: set of ids of points that will be used to compute the centroid
+        """
+
+        msg = CentroidMessage(points_with_pos)
         msg.setWindowModality(Qt.WindowModality.ApplicationModal)
         set_points_chosen = set()
             
@@ -931,6 +1198,9 @@ class Sphere3D(QWidget):
         return set_points_chosen
 
     def values_clicked(self) -> None:
+        """Shows picture and allows to put landmarks on it
+        """
+
         intrinsics = np.matrix(self.calibration_dict["intrinsics"]["camera matrix"]["matrix"])
         distCoeffs = np.matrix(self.calibration_dict["intrinsics"]["distortion matrix"]["matrix"])
         extrinsics = np.matrix(self.calibration_dict["extrinsics"][self.current_image]["matrix"])
@@ -943,6 +1213,13 @@ class Sphere3D(QWidget):
         self.win.closeSignal.connect(self.get_dots)
     
     def get_dots(self, dots):
+        """Executed when show_picture is closed
+        Triangulate all the possible points and get their positions
+
+        Args:
+            dots (_type_): _description_
+        """
+
         nbr_img = 0
         mean_error = 0
         intrinsics = np.matrix(self.calibration_dict["intrinsics"]["camera matrix"]["matrix"])
@@ -956,7 +1233,9 @@ class Sphere3D(QWidget):
                 self.dots[index].set_position(pos)
             if self.dots[index].get_position() is not None:
                 dot_images = self.dots[index].get_dots()
+
                 for image in dot_images:
+                    #Computation of the reprojection error
                     if dot_images[image] is None:
                         continue
                     point = np.matrix([list(self.dots[index].position)])
@@ -977,9 +1256,18 @@ class Sphere3D(QWidget):
         
     
     def estimate_position(self, point: reconstruction.Point3D):
+        """Triangulate a point
+
+        Args:
+            point (reconstruction.Point3D): 3d point with all the landmarks
+
+        Returns:
+            np.ndarray: the 3D position of the point
+        """
         dots_no_None = {k:v for (k,v) in point.dots.items() if v is not None}
 
         if len(dots_no_None) <2 :
+            # We need at least 2 landmarks to triangulate
             return None
         intrinsics = np.matrix(self.calibration_dict["intrinsics"]["camera matrix"]["matrix"])
         dist_coeffs = np.matrix(self.calibration_dict["intrinsics"]["distortion matrix"]["matrix"])
@@ -989,6 +1277,7 @@ class Sphere3D(QWidget):
         
         proj_points = []
         for dot in dots:
+            #  For each landmark, we need to compute the undistorted position on the image
             image_ext = np.matrix(self.calibration_dict["extrinsics"][dot[0]]["matrix"])
             image_ext = image_ext[0:3, 0:4]
             proj_mat = np.matmul(intrinsics, image_ext)
@@ -996,19 +1285,24 @@ class Sphere3D(QWidget):
             img_point_undistort = reconstruction.undistort_iter(np.array([img_point]).reshape((1,1,2)), intrinsics, dist_coeffs)
             proj_point = helpers.ProjPoint(proj_mat, img_point_undistort)
             proj_points.append(proj_point)
+        
+        # Triangulation computation with all the undistorted landmarks
         points3D = reconstruction.triangulate_point(proj_points)
         return tuple(points3D)
 
 class CentroidMessage(QDialog):
+    """Dialog with checkboxes to select points needed for centroid
+    """
+
     def __init__(self, dots_with_pos):
         super(CentroidMessage, self).__init__()
         self.setWindowTitle("MessageBox demo")
 
         v_layout = QVBoxLayout()
         v_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        self.hide_all_button = QPushButton("hide all")
-        self.hide_all_button.clicked.connect(self.hide_all)
-        v_layout.addWidget(self.hide_all_button)
+        self.check_all_button = QPushButton("hide all")
+        self.check_all_button.clicked.connect(self.check_all)
+        v_layout.addWidget(self.check_all_button)
         self.visible = True
 
         self.checkboxes = list()
@@ -1032,24 +1326,38 @@ class CentroidMessage(QDialog):
 
         
     
-    def hide_all(self):
+    def check_all(self):
+        """Check or Uncheck all boxes
+        """
+
         for i in self.checkboxes:
             print(f"Button {i.text()} : {Qt.CheckState.Unchecked if self.visible else Qt.CheckState.Checked}")
             i.setCheckState(Qt.CheckState.Unchecked if self.visible else Qt.CheckState.Checked)
         self.visible = not self.visible
-        self.hide_all_button.setText("hide all" if self.visible else "show all")
+        self.check_all_button.setText("hide all" if self.visible else "show all")
     
     def check_visibility(self):
+        """Updates visible if needed
+        """
+
         self.visible = self.check_visible()
-        self.hide_all_button.setText("hide all" if self.visible else "show all")
+        self.check_all_button.setText("hide all" if self.visible else "show all")
         
     def check_visible(self):
+        """Checks the state of all checkboxe
+        """
+        
         for i in self.checkboxes:
             if i.isChecked():
                 return True
         return False
 
 class InitWidget(QWidget):
+    """Wiget when a calibration file is not loaded
+
+    Args:
+        QWidget (_type_): _description_
+    """
 
     def __init__(self, parent):
         super(InitWidget, self).__init__(parent)
@@ -1077,16 +1385,22 @@ class InitWidget(QWidget):
         self.setLayout(self.layout)
     
     def import_project(self):
+        """Import a calibration file
+        """
         dir_ = QFileInfo(QFileDialog.getOpenFileName(self, "Open Calibration File", ".", "JSON (*.json)")[0])
         self.parent().load_dir(dir_)
         self.parent().layout.setCurrentIndex(1)
-    
-    def fixed_directory(self, directory):
-        if self.dir != directory:
-            self.dlg_save.setDirectory(self.dir)
 
     
     def create_project(self):
+        """Create calibration file
+
+            We need :
+            - a directory containing all the image
+            - an XML file containing the intrinsic parameters (in Opencv format)
+            - a Json file containing the extrinsics
+            - the folder containing the thumbnails if it exists
+        """
         dlg = import_project.QImportProject()
         dlg.setWindowModality(Qt.WindowModality.NonModal)
         if dlg.exec():
