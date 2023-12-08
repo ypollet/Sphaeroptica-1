@@ -59,6 +59,7 @@ class MainWindow(QMainWindow):
         self.layout = QStackedLayout()
         self.stack_widgets = []
 
+        # Stack of the different main widgets
         self.home = HomeWidget(self)
         self.calib = CalibrationWidget(self)
         self.rec = ReconstructionWidget(self)
