@@ -9,7 +9,7 @@ Here is the list of the requirements needed to run Sphaeropica :
 * python >= 3.8
 * numpy
 * scipy
-* pyqt 6
+* PySide6
 * imutils
 * opencv-python
 * matplotlib
