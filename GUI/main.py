@@ -45,7 +45,6 @@ from PySide6.QtCore import (
 from GUI.reconstruction import ReconstructionWidget
 from GUI.home import HomeWidget
 from scripts.helpers import Indexes
-from GUI.calibration import CalibrationWidget
 
 class MainWindow(QMainWindow):
 
@@ -61,11 +60,9 @@ class MainWindow(QMainWindow):
 
         # Stack of the different main widgets
         self.home = HomeWidget(self)
-        self.calib = CalibrationWidget(self)
         self.rec = ReconstructionWidget(self)
 
         self.layout.addWidget(self.home)
-        self.layout.addWidget(self.calib)
         self.layout.addWidget(self.rec)
 
         self.layout.setCurrentIndex(0)
@@ -90,9 +87,6 @@ class MainWindow(QMainWindow):
             self.layout.setCurrentIndex(back)
     
     def init_settings(self):
-        self.settings = QSettings("Sphaeroptica", "camera_calibration")
-        self.settings.clear()
-
         self.settings = QSettings("Sphaeroptica", "reconstruction")
         self.settings.clear()
     
@@ -101,17 +95,11 @@ class MainWindow(QMainWindow):
         #self.back_action.setStatusTip("Go back")
         self.back_action.triggered.connect(self.get_back_widget)
 
-        self.calibration_action = QAction("Calib.")
-        self.calibration_action.triggered.connect(self.go_to_calib)
         
         self.new_action = QAction("New File..", self)
         self.new_action.triggered.connect(self.new_file)
         self.open_action = QAction("Open..", self)
         self.open_action.triggered.connect(self.open_file)
-
-
-    def go_to_calib(self):
-        self.set_widget(Indexes.CAM)
 
     def open_file(self):
         self.rec.reconstruction_settings.setValue("directory", None)
@@ -127,9 +115,6 @@ class MainWindow(QMainWindow):
         menu = self.menuBar()
         
         menu.addAction(self.back_action)
-        
-        menu.addAction(self.calibration_action)
-
         file_menu = menu.addMenu("Reconst.")
         file_menu.addAction(self.new_action)
         file_menu.addAction(self.open_action)

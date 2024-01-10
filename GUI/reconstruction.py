@@ -1421,7 +1421,7 @@ class InitWidget(QWidget):
 
             queue_img_to_make = deque()
             
-            thumb_w = thumb_h = 640
+            thumb_w = thumb_h = 1000
             #sauver les thumbnails
             for key in self.calib["extrinsics"]:
                 if f'{self.dir}/{self.calib["thumbnails"]}/{key}' not in images_thumbnails:
@@ -1438,9 +1438,8 @@ class InitWidget(QWidget):
                 print(img)
                 with Image.open(f'{self.dir}/{img}') as im_basic:
                     im_basic.thumbnail((thumb_w, thumb_h), Image.LANCZOS)
-                    thumb_w = im_basic.width
-                    thumb_h = im_basic.height
                     im_basic.save(f'{self.dir}/{self.calib["thumbnails"]}/{img}')
+                    print(f"Saved thumbnail : {img} : {im_basic.width}:{im_basic.height}")
 
             self.calib["thumbnails_width"] = thumb_w
             self.calib["thumbnails_height"] = thumb_h

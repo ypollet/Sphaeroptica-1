@@ -2,35 +2,52 @@
 
 Sphaeroptica is an open-source viewer based on photogrammetry that allows to view 3D objects without needing to compute a 3D model.
 
-## Requirements
+## Installation
+
+### Hardware requirements
+
+We have been able to run Sphaeroptica on an old laptop with an Intel i5-7200 with Ubuntu 20.04. The program is not heavy at all.
+
+### Software Requirements
 
 Here is the list of the requirements needed to run Sphaeropica :
 
 * python >= 3.8
 * numpy
 * scipy
-* pyqt 6
+* PySide6
 * imutils
 * opencv-python
 * matplotlib
 
 Make sure that only opencv-python is installed, installing other opencv packages can create some bugs
 
-If OpenCV and Pyqt6 show an error, uninstall opencv-python and use this command to install it :
+### Run on Ubuntu (22.04)
+
+### Run on Windows 11
+
+Make sure that only opencv-python is installed, installing other opencv packages can create some bugs
+
+If OpenCV and Pyside6 show an error, uninstall opencv-python and use this command to install it :
 ```pip3 install --no-binary opencv-python opencv-python```
 
 You can install these requirements with :
 ```pip3 install -r requirements.txt```
 
-## Quick Start Guide
+## Create your own Sphaeroptica project
 
 Start the application with :
 
 ```python3 app.py```
 
-Sphaeroptica has two functionalities : 
-* calibration with Zhang pattern
-* view and measurements of an object
+### Data folder
+
+### Import images
+
+### Specify the intrinsic and extrinsinc files
+
+## Virtual camera
+
 ### Calibration
 
 Select the directory that contains all the images needed for the calibration process.

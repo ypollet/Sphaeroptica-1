@@ -56,24 +56,16 @@ class HomeWidget(QWidget):
 
         # choices 
         choices = QHBoxLayout()
-        cam_calib = QPushButton(text="Camera Calibration",parent=self)
-        cam_calib.setFixedSize(500, 300)
-        cam_calib.clicked.connect(self.camera_clicked)
-
         rec = QPushButton(text="3D reconstruction",parent=self)
         rec.setFixedSize(500, 300)
         rec.clicked.connect(self.rec_clicked)
         
 
-        choices.addWidget(cam_calib)
         choices.addWidget(rec)
         choices.setContentsMargins(0,0,0,0)
         layout.addLayout(choices)
 
         self.setLayout(layout)
-        
-    def camera_clicked(self):
-        self.parent.set_widget(Indexes.CAM)
 
     def rec_clicked(self):
         self.parent.set_widget(Indexes.REC)

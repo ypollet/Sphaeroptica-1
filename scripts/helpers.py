@@ -36,8 +36,7 @@ HEIGHT_COMPONENT = 25
 
 class Indexes(Enum):
     HOME = 0
-    CAM = 1
-    REC = 2
+    REC = 1
 
 class Scale(Enum):
     M = 1
