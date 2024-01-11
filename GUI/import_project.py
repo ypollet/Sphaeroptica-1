@@ -255,7 +255,7 @@ class QImportProject(QDialog):
 
         self.buttonBox = QDialogButtonBox(QBtn)
 
-        #self.buttonBox.button(QDialogButtonBox.StandardButton.Ok).setEnabled(False)
+        self.buttonBox.button(QDialogButtonBox.StandardButton.Ok).setEnabled(False)
 
         self.buttonBox.accepted.connect(self.accept)
         self.buttonBox.rejected.connect(self.reject)
@@ -266,7 +266,7 @@ class QImportProject(QDialog):
         
         self.dir_widget = _DirWidget()
         self.dir_widget.updated.connect(self.update_dir_image)
-        #self.dir_widget.updated.connect(self.enable_ok)
+        self.dir_widget.updated.connect(self.enable_ok)
         self.layout.addWidget(self.dir_widget)
 
         self.int_widget = _IntrinsicsWidget(self.dir_image)

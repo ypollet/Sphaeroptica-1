@@ -253,7 +253,7 @@ class QPoints(QScrollArea):
     def __init__(self, parent):
         super(QPoints, self).__init__(parent)
         self.w = QWidget()
-        self.add_pt_btn = QPushButton("Add point")
+        self.add_pt_btn = QPushButton("Add landmark")
         self.add_pt_btn.setSizePolicy(QSizePolicy.Policy.Expanding,
             QSizePolicy.Policy.Maximum)
         self.add_pt_btn.clicked.connect(self.add_dot)
@@ -1363,15 +1363,15 @@ class InitWidget(QWidget):
         super(InitWidget, self).__init__(parent)
 
         self.layout = QVBoxLayout()
-        self.question  = QLabel("Import or create project")
+        self.question  = QLabel("Open or create new project")
         self.question.setAlignment(Qt.AlignmentFlag.AlignHCenter)
         self.layout.addWidget(self.question)
 
         # choices 
         self.choices = QHBoxLayout()
-        self.cam_calib = QPushButton(text="Import",parent=self)
+        self.cam_calib = QPushButton(text="Open",parent=self)
         self.cam_calib.setFixedSize(500, 300)
-        self.cam_calib.clicked.connect(self.import_project)
+        self.cam_calib.clicked.connect(self.open_project)
 
 
         rec = QPushButton(text="Create new project",parent=self)
@@ -1384,16 +1384,16 @@ class InitWidget(QWidget):
         self.layout.addLayout(self.choices)
         self.setLayout(self.layout)
     
-    def import_project(self):
-        """Import a calibration file
+    def open_project(self):
+        """Open a project file
         """
-        dir_ = QFileInfo(QFileDialog.getOpenFileName(self, "Open Calibration File", ".", "JSON (*.json)")[0])
+        dir_ = QFileInfo(QFileDialog.getOpenFileName(self, "Open project File", ".", "JSON (*.json)")[0])
         self.parent().load_dir(dir_)
         self.parent().layout.setCurrentIndex(1)
 
     
     def create_project(self):
-        """Create calibration file
+        """Create project file
 
             We need :
             - a directory containing all the image
@@ -1406,7 +1406,7 @@ class InitWidget(QWidget):
         if dlg.exec():
             self.dir = dlg.dir_image
             self.calib = dlg.calib
-            self.calib_file_name = QFileDialog.getSaveFileName(self, "Save Calibration File", self.dir+"/.json","Json Files (*.json)")[0]
+            self.calib_file_name = QFileDialog.getSaveFileName(self, "Save Project File", self.dir+"/.json","Json Files (*.json)")[0]
             
             if not self.calib_file_name.strip():
                 # canceled
@@ -1433,6 +1433,7 @@ class InitWidget(QWidget):
                         thumb_h = im.height
             
             while len(queue_img_to_make) != 0:
+                # TODO : Make a progress bar
                 print(len(queue_img_to_make))
                 img = queue_img_to_make.pop()
                 print(img)
@@ -1456,12 +1457,7 @@ class ReconstructionWidget(QWidget):
         super(ReconstructionWidget, self).__init__(parent)
 
         self.init_settings()
-        try:
-            file_settings = self.reconstruction_settings.value("directory")
-            self.dir_images = QFileInfo(file_settings) if file_settings is not None and QFileInfo(file_settings).exists() else None
-        except:
-            self.reconstruction_settings.setValue("directory", None)
-            self.dir_images = None
+        self.dir_images = None
 
         self.parent = parent
         self.setWindowTitle("3D reconstruction")
@@ -1476,6 +1472,8 @@ class ReconstructionWidget(QWidget):
         self.layout.addWidget(self.init)
         self.layout.addWidget(self.viewer)
         self.layout.setContentsMargins(0,0,0,0)
+        # TODO : limit size of viewer to not crash if too big
+        #self.setMaximumSize()
 
         self.setLayout(self.layout)
         
