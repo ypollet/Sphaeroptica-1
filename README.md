@@ -20,18 +20,40 @@ Here is the list of the requirements needed to run Sphaeropica :
 * opencv-python
 * matplotlib
 * pandas
+* bs4
 
 Make sure that only opencv-python is installed, installing other opencv packages can create some bugs
 
-If OpenCV and Pyside6 show an error, uninstall opencv-python and use this command to install it :
+If OpenCV and PySide6 show an error, uninstall opencv-python and use this command to install it :
 ```
 pip3 install --no-binary opencv-python opencv-python
 ```
 
 
-### 1.3 Run on Ubuntu (22.04)
+#### 1.2.1 Conda
+The easiest way to install the requirements is to install the pre-configured Anaconda environment
 
-You can install these requirements with :
+
+##### On Ubuntu (22.04)
+```bash
+cd path/to/Sphaeroptica
+conda env create -f conda_environment/conda_UBUNTU.yml
+```
+
+##### on Windows
+```bash
+cd path/to/Sphaeroptica
+conda env create -f conda_environment/conda_WINDOWS.yml
+```
+
+After the initialization of the environment, restart the terminal and activate it :
+```bash
+conda activate Sphaeroptica
+```
+
+#### 1.2.2 Pip 
+
+But if you prefer to install them through pip, we created a file that contains all the requirements, you can install them with these : 
 ```bash
 pip3 install -r requirements.txt
 ``` 
@@ -40,11 +62,9 @@ or
 python3 -m pip install -r requirements.txt
 ``` 
 
-### 1.4 Run on Windows 11
-
 ## 2. Create your own Sphaeroptica project
 
-Start the application with :
+Start the application :
 
 ```bash
 cd path/to/Sphaeroptica

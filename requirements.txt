@@ -5,3 +5,4 @@ mutils
 opencv-python
 matplotlib
 imutils
+bs4
