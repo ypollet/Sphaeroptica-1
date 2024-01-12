@@ -41,3 +41,4 @@ dependencies:
   - pySide6=6.6.1
   - imutils=0.5.4
   - pandas=2.1.4
+  - bs4=4.12.2
