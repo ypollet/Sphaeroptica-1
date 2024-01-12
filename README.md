@@ -6,7 +6,7 @@ Sphaeroptica is an open-source viewer based on photogrammetry that allows to vie
 
 ### 1.1 Hardware requirements
 
-We have been able to run Sphaeroptica on an old laptop with an Intel i5-7200 with Ubuntu 20.04. The program is not heavy at all.
+We have been able to run Sphaeroptica on an old laptop with an Intel i5-7200 on Ubuntu 20.04. The program is not heavy at all.
 
 ### 1.2 Software Requirements
 
@@ -19,20 +19,28 @@ Here is the list of the requirements needed to run Sphaeropica :
 * imutils
 * opencv-python
 * matplotlib
-
-Make sure that only opencv-python is installed, installing other opencv packages can create some bugs
-
-### 1.3 Run on Ubuntu (22.04)
-
-### 1.4 Run on Windows 11
+* pandas
 
 Make sure that only opencv-python is installed, installing other opencv packages can create some bugs
 
 If OpenCV and Pyside6 show an error, uninstall opencv-python and use this command to install it :
-```pip3 install --no-binary opencv-python opencv-python```
+```
+pip3 install --no-binary opencv-python opencv-python
+```
+
+
+### 1.3 Run on Ubuntu (22.04)
 
 You can install these requirements with :
-```pip3 install -r requirements.txt```
+```bash
+pip3 install -r requirements.txt
+``` 
+or
+```bash
+python3 -m pip install -r requirements.txt
+``` 
+
+### 1.4 Run on Windows 11
 
 ## 2. Create your own Sphaeroptica project
 
@@ -189,7 +197,12 @@ Where to click :
 ![Shortcuts](./images/display_full_image.png)
 
 The new window :
-![window of the landmark-placement page](./images/page_landmarks.png)
+![window of the landmark-placement page](./images/page_landmarks.png)  
+
+Choose the landmark you want to place, either by :
+* clicking directly on the button with the landmark label
+* pressing the + key (goes down the list)
+* pressing the - key (goes up the list)
 
 Left clicking on the image will place the designated landmark on the image.
 
@@ -199,7 +212,7 @@ When a landmark has been placed on multiple image (minimum 2), Sphaeroptica will
 
 ![reprojection of a 3D landmark](./images/reproject_landmark.png)
 
-### Zoom on the image
+### 4.3 Zoom on the image
 
 You have the possibility to zoom on the image as much as you want to be able to precisely place the landmark at the right pixel.
 
@@ -209,7 +222,9 @@ Here is a list of the actions you're allowed do to zoom in on the image :
 * Ctrl+s : zoom to fit the image entirely in the window
 * Ctrl+f : zoom to the resolution of the image
 
-### Widen the landmarks on the images
+When the image is bigger than the screen, you can
+
+### 4.4 Widen the landmarks on the images
 It is possible to adjust the size of the landmarks placed on the image.
 However, be aware that making the landmark bigger, even though if it makes it easier to find, makes it harder to know where it is precisely located.
 

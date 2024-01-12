@@ -418,7 +418,7 @@ class QImageViewer(QMainWindow):
         self.image_label.paint_dots()
 
     def switchPoint(self, i : int):
-        if self.point+i < len(self.image_label.dots) and self.point+i > 0:
+        if self.point+i < len(self.image_label.dots) and self.point+i >= 0:
             self.point += i
         self.points.check(self.point)
 

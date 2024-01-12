@@ -1,0 +1,43 @@
+# Sphaeroptica - 3D Viewer on calibrated images
+
+# Copyright (C) 2023 Yann Pollet, Royal Belgian Institute of Natural Sciences
+
+#
+
+# This program is free software: you can redistribute it and/or
+
+# modify it under the terms of the GNU General Public License as
+
+# published by the Free Software Foundation, either version 3 of the
+
+# License, or (at your option) any later version.
+
+# 
+
+# This program is distributed in the hope that it will be useful, but
+
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+
+# General Public License for more details.
+
+#
+
+# You should have received a copy of the GNU General Public License
+
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+
+name: Sphaeroptica
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10.13
+  - pip=23.3.1
+  - numpy=1.26.3
+  - scipy=1.11.4
+  - matplotlib=3.8.0
+  - opencv=4.8.1
+  - pySide6=6.6.1
+  - imutils=0.5.4
+  - pandas=2.1.4
