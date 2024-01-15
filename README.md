@@ -46,14 +46,14 @@ cd path/to/Sphaeroptica
 conda env create -f conda_environment/conda_WINDOWS.yml
 ```
 
-After the initialization of the environment, restart the terminal and activate it :
+After the initialization of the conda environment, restart the terminal and activate it :
 ```bash
 conda activate Sphaeroptica
 ```
 
 #### 1.2.2 Pip 
 
-But if you prefer to install them through pip, we created a file that contains all the requirements, you can install them with these : 
+But if you prefer to install them through pip, we created a file that contains all the requirements, you can install them with these commands : 
 ```bash
 pip3 install -r requirements.txt
 ``` 
@@ -73,11 +73,11 @@ python3 app.py
 
 ### 2.1 Data folder
 
-The only requirement is to have a folder with the images, the intrinsic parameters in a XML file, and the extrinsic parameters in a JSON file.
+Sphaeroptica requires that the Data folder contains all the images, and to have the intrinsic parameters in a XML file, and the extrinsic parameters in a JSON file for these images.
 
 ```bash  
-├── export_extrinsics.json
-├── export_intrinsics.xml
+├── export_extrinsics.json (optional)
+├── export_intrinsics.xml (optional)
 ├── *.jpg (all images)
 ├── ...
 ```
@@ -118,31 +118,34 @@ The file should look like this :
 
 On "extrinsics", select the json file containing the extrinsics values for each of the images
 The file should look like this :
-```json
+```
 {
     "IMAGE1.jpg": {
         "matrix": [
-            [r11,r12,r13,t1],
+            [r_11,r12,r13,t1],
             [r21,r22,r23,t2],
             [r31,r32,r33,t3],
             [0.0,0.0,0.0,1.0]
         ]
     },
+    "IMAGE2.jpg": 
     ...
 }
 ```
 
-These two files are not required to be in the folder for the program to work correctly.
+These two files are not required to be in the folder for the program to work correctly, even though it would be easier.
 
 ### 2.4 Thumbnails
-If thumbnails have already been created, you can specify it. But it isn't required, and in this case, Sphaeroptica will create them for you in a folder called "thumbnails".
+If thumbnails have already been created, you can specify it to Sphaeroptica.  
+Otherwise, Sphaeroptica will create them for you in a folder called "thumbnails".
 
 ### 2.5 Save the project file
-Sphaeroptica will save the project file in JSON format directly in the folder.
-That file will contain all the data needed for Sphaeroptica : 
-* intrinsic calibration
-* extrinsic
+Sphaeroptica will save the project file in JSON format directly in the data folder.
+That file will contain all the data needed for Sphaeroptica :
+
+* intrinsic matrix
 * distortion coefficients
+* extrinsic matrix for each image
 * a directory of thumbnails for the virtual camera
 
 The folder structure will look like this :
@@ -151,22 +154,24 @@ The folder structure will look like this :
 ├── export_intrinsics.xml (optional)
 ├── ext.json (optional)
 ├── thumbnails
-│   ├── *.jpg
-│   ├── ...
+|  ├── *.jpg
+|  ├── ...
 ├── *.jpg
 ├── ...
 ```
 
 ## 3. Virtual camera
-When you open a project, the first screen you'll see is the virtual camera
+When you open any project, the first window you will see is the virtual camera
+
 ![Screen of the application](./images/page_full.png)
 
 On the left, we have the virtual camera, displaying the nearest referenced image (thanks to geometric computations).
 
 On the right, we have :
+
 * Quick buttons to get to a desired view (Frontal, Posterior, Left, Right, Inferior, Superior)
-* A list of desired 3D points
-* A distance calculator between two 3D points
+* A list of desired 3D landmarks
+* A distance calculator between two 3D landmarks
 
 ### 3.1 How to use the virtual camera
 
@@ -175,11 +180,12 @@ Moving the mouse horizontally and vertically will respectively change the longit
 
 It is also possible to change those coordinates with the arrows on your keyboard.
 
-Each time the value change, Sphaeroptica will find the nearest image (thanks to the comparison of the coordinates of the virtual camera and the ones of every image) and display it.
+Each time the geodesic values of the virtual camera change, Sphaeroptica will find the nearest image and display it.
 
 ### 3.2 View shortcuts
 
-Sphaeroptica allows to have a shortcut to some designated views : 
+Sphaeroptica allows to have a shortcut to some designated views :
+
 * superior view S
 * left view L
 * frontal view F
@@ -189,18 +195,26 @@ Sphaeroptica allows to have a shortcut to some designated views :
 
 ![Shortcuts](./images/shortcut_views.png)
 
-Left-clicking on these widget would move the virtual camera to the desired view.  
-Right-clicking would set the value of the desired view to the current view and it will automatically save it to the project file.
+Left-clicking on any of these widget would move the virtual camera to the desired view.  
+Right-clicking would set the value of the desired view to the current view and it will automatically save it to the project file.  
+
+There is also a keyboard version of these shortcuts :
+
+* Key : same as left-clicking
+* Ctrl+Key : same as right-clicking
+
+e.g. pressing F would set the virtual camera to the Frontal view
 
 ## 4. Landmarks Placement
 
-The main feature of Sphaeroptica is the possibility to create landmarks and compute their 3D positions (to be able later to make geometric computation).  
+The main feature of Sphaeroptica is the possibility to create landmarks and compute their 3D positions.  
 For this, we need to configure the landmark and to place it on at least 2 images.
 
 ### 4.1 Landmark configuration
 
 You can add as many landmarks as needed for you.  
 For each landmark it is possible to (in order):
+
 1. change its position in the list
 2. change its label
 3. change its color
@@ -211,15 +225,18 @@ For each landmark it is possible to (in order):
 
 ### 4.2 Place a landmark on an image
 
-If you click on the widget containing the geodesic values, you will display the image in a 
+If you click on the widget containing the geodesic values, you will display the image in a new window
 
 Where to click :
+
 ![Shortcuts](./images/display_full_image.png)
 
 The new window :
+
 ![window of the landmark-placement page](./images/page_landmarks.png)  
 
 Choose the landmark you want to place, either by :
+
 * clicking directly on the button with the landmark label
 * pressing the + key (goes down the list)
 * pressing the - key (goes up the list)
@@ -228,7 +245,7 @@ Left clicking on the image will place the designated landmark on the image.
 
 ![placement of a landmark on an image](./images/place_landmark.png)
 
-When a landmark has been placed on multiple image (minimum 2), Sphaeroptica will triangulate its 3D position. That position will then be reprojected on every new image.
+When a landmark has been placed on multiple images (minimum 2), Sphaeroptica will triangulate its 3D position. That position will then be reprojected on every new image.
 
 ![reprojection of a 3D landmark](./images/reproject_landmark.png)
 
@@ -236,17 +253,18 @@ When a landmark has been placed on multiple image (minimum 2), Sphaeroptica will
 
 You have the possibility to zoom on the image as much as you want to be able to precisely place the landmark at the right pixel.
 
-Here is a list of the actions you're allowed do to zoom in on the image :
+Here is a list of the actions you are allowed do to zoom in on the image :
+
 * Ctrl++ : zoom 5% in
 * Ctrl+- : zoom 5% out
 * Ctrl+s : zoom to fit the image entirely in the window
 * Ctrl+f : zoom to the resolution of the image
 
-When the image is bigger than the screen, you can
+When the image is bigger than the screen, you can scroll on the image with your right click.
 
 ### 4.4 Widen the landmarks on the images
 It is possible to adjust the size of the landmarks placed on the image.
-However, be aware that making the landmark bigger, even though if it makes it easier to find, makes it harder to know where it is precisely located.
+However, be aware that making the landmark bigger, even if it makes it easier to find, makes it harder to know where it is precisely located.
 
 ## 5. Measurements
 
@@ -257,17 +275,18 @@ When two landmarks have a 3D position, we can measure the distance between them 
 You can select a defined scale (M, CM or MM), depending on the size of the object.
 
 Additionally, you can rescale all the measurements thanks to a reference. 
-If there is a known distance between two points on the object, you can set it manually by writing it on the distance calculator.  
+If there is a known distance between two landmarks on the object, you can set it manually by writing it on the distance calculator.  
 After that, Sphaeroptica will automatically modify all the distances computed and it is reversible by pressing the button "Reset Factor".
 
-### 5.1 Export points into a csv
+### 5.1 Export landmarks into a csv
 
-Clicking the "Export" button would allow you to export all the points in a csv format.  
+Clicking the "Export" button would allow you to export all the landmarks in a csv format.  
 The format will look like this : 
 ```csv
 Label	Color	X	Y	Z	X_adjusted	Y_adjusted	Z_adjusted 
 ```
 with :
+
 * Label, the label of the landmark
 * X,Y,Z, the 3D coordinates of the landmarks
 * X_adjusted, Y_adjusted, Z_adjusted, the refined coordinates (the coordinates multiplied by the scale factor)
@@ -275,6 +294,7 @@ with :
 ## 6. How to make your own sphere of images
 
 Sphaeroptica needs has two requirements : 
+
 * A set of images taken around an object (at equal distance and with the same camera)
 * the calibration of these images
 
@@ -286,50 +306,50 @@ In our case, we used [scAnt](https://github.com/evo-biomech/scAnt). We choose to
 
 ### 6.2 Focus Stacking (optional)
 
-It is necessary for smaller specimens with a lot of details, and focus stacking distortion is negligible for the calibration and triangulation (as our tests suggests).
+It is necessary for smaller specimens with a lot of details, and focus stacking distortion is negligible for the calibration and triangulation (as our tests suggest).
 
-The best stacker software that we've tested are Zerene Stacker and Helicon Focus ([Here](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4284632/)) and Helicon Focus uses the GPU for its computations (thus, is much faster).  
-However, these are softwares with a paid license. A free open-sourced solution would be Enfuse (even though, it gives a halo around the object).
+The best stacker software that we have tested are Zerene Stacker and Helicon Focus ([Here](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4284632/)) and Helicon Focus uses the GPU for its computations (thus, is much faster).  
+However, these are softwares with a paid license. A free open-sourced solution would be Enfuse (even though it gives a halo around the object).
 
 ### 6.3 Calibration
 
-For the calibration, using the SfM softwares that you are already using is recommended, as it is better to be used to it.  
-Unfortunately, the data that is exported from the software has to be in the form shown in [2.3](#2.3-Specify-the-intrinsic-and-extrinsic-files).
+For the calibration step, we would recommend you to use softwares that you are already used to. It will result on a faster and better process for you.  
+You have to simply make sure that the data that is exported from the software has to be in the form shown in [2.3](#2.3-Specify-the-intrinsic-and-extrinsic-files).
 
-We used Agisoft Metashape Professional Edition, one of the most used proprietary software to digitize collections. And thus developed converters around the data that we get from Agisoft Metashape. Unfortunately, the license fee changed for scientific establishement, making it expensive.
+In our case, we used Agisoft Metashape Professional Edition, a licensed photogrammetry software. And thus developed converters around the data that we get from Agisoft Metashape.
 
-If you use another software, you will have to make your own converter.  
-However, to make the program more accessible to anyone, we are developing a converter from data exported by [COLMAP](https://github.com/colmap/colmap), as it is a free open-source project.
+If you use another software, you will have to convert the data yourself.  
+However, to make the program more accessible to every user, we are developing a converter from data exported by [COLMAP](https://github.com/colmap/colmap), as it is a free open-source project.
 
-Please, make sure that the pictures are correctly oriented and rotated.  
-Frontal view should be at (0,0) with lateral views at (-90,0) and (90,0). You can rotate the specimen in a SfM software, but not doing so may cause some problems for Sphaeroptica.
+Please, make sure that the pictures are correctly oriented (calibration) and rotated (rotation of the picture).  
+Sphaeroptica does not change these parameters and not doing so could land some funny results.  
+Frontal view should be at (0,0) with lateral views at (-90,0) (right side) and (90,0) (left side). If needed, rotate the specimen in your SfM software before exporting its calibration parameters.
 
 #### 6.3.1 Convert from Metashape project
 
 If you use Agisoft Metashape, here are the steps you have to do to convert your data for Sphaeroptica.
 
-When you're images are calibrated (with "Align Photos"), you can export the intrinsics parameters with  Tools > Camera Calibration > Adjusted, and export it in "OpenCV Camera Calibration (*.xml)" format. This will give you the file needed for the intrinsics values in Sphaeroptica.
+When your images are calibrated (with "Align Photos"), you can export the intrinsics parameters with  Tools > Camera Calibration > Adjusted, and export it in "OpenCV Camera Calibration (*.xml)" format. This will give you the file needed for the intrinsics values in Sphaeroptica.
 
 For the extrinsics, you have to go to File > Export > Export Cameras, and export the file as "Omega Phi Kappa (*txt)".  
 This CSV file still has to be converted into the needed JSON file.  
-Fortunatel, we developed a script that does that and that is available at [scripts/additional/import_cameras_to_sphaeroptica.py](scripts/additional/import_cameras_to_sphaeroptica.py)
+Fortunately, we developed a script that does that and that is available at [scripts/additional/import_cameras_to_sphaeroptica.py](scripts/additional/import_cameras_to_sphaeroptica.py)
 
 ```bash
 cd path/to/Sphaeroptica
 python3 scripts/additional/import_cameras_to_sphaeroptica.py -i path/to/csv.txt -o path/to/output.json
 ```
 
-### 6.4 Data folder needed
-
 ## Contributing
 
 We know this project is far from perfect and are working on a 2nd version using web technologies (allowing easier deployment of Sphaeroptica).  
 
-We are aware that the architecture of this app is sub-optimal and are working on it on that iteration.  
-Thus, we won't allow Pull Request now, as it is unnecessary.
+We are aware that the architecture of this app is sub-optimal and are also working on it on that iteration.  
+Thus, we won't allow Pull Requests now, as it is unnecessary.
 
-However, feel free to create a Issue to send suggestions on elements to improve or even bugs, in case we miss some.
+However, feel free to create an Issue to send suggestions on elements to improve or even bugs, in case we miss some.
 
 ## Credits
 
-Icons from Fugue Icon Set — Yusuke Kamiyamane : https://p.yusukekamiyamane.com/
+Icons from Fugue Icon Set — Yusuke Kamiyamane : [Link](https://p.yusukekamiyamane.com/)  
+scAnt - Fabian Plum : [Link](https://github.com/evo-biomech/scAnt)
