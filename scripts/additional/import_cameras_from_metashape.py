@@ -53,7 +53,7 @@ if __name__ == '__main__':
     ap.add_argument("-i", "--input", required=True,
                     help="path to input OPK File")
     ap.add_argument("-o", "--output", required=False, default=None,
-                    help="path to output CSV File")
+                    help="path to output JSON File")
     args = vars(ap.parse_args())
 
     input_path = Path(args["input"])
@@ -104,7 +104,7 @@ if __name__ == '__main__':
 
 
         #looks like it's zyx
-        mat = reconstruction.rotate_x_axis(math.radians(180))@ np.matrix([[r11, r12, r13],
+        mat = np.matrix([[r11, r12, r13],
                         [r21, r22, r23],
                         [r31, r32, r33]])
         mat_mul = np.matmul(Rx, np.matmul(Ry, Rz))

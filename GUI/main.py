@@ -37,10 +37,10 @@ from PySide6.QtWidgets import (
     QMainWindow, QStackedLayout, QWidget
 )
 from PySide6.QtGui import (
-    QAction, QIcon
+    QAction, QIcon, QResizeEvent
 )
 from PySide6.QtCore import (
-    QSettings
+    QSettings, QRect
 )
 from GUI.reconstruction import ReconstructionWidget
 from GUI.home import HomeWidget
@@ -66,7 +66,6 @@ class MainWindow(QMainWindow):
         self.layout.addWidget(self.rec)
 
         self.layout.setCurrentIndex(0)
-
         widget = QWidget()
         widget.setLayout(self.layout)
         self.setCentralWidget(widget)
@@ -103,7 +102,7 @@ class MainWindow(QMainWindow):
 
     def open_file(self):
         self.rec.reconstruction_settings.setValue("directory", None)
-        self.rec.init.import_project()
+        self.rec.init.open_project()
         self.set_widget(Indexes.REC)
 
     def new_file(self):
@@ -118,6 +117,5 @@ class MainWindow(QMainWindow):
         file_menu = menu.addMenu("Reconst.")
         file_menu.addAction(self.new_action)
         file_menu.addAction(self.open_action)
-    
         
 

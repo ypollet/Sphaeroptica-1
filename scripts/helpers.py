@@ -39,9 +39,12 @@ class Indexes(Enum):
     REC = 1
 
 class Scale(Enum):
-    M = 1
-    CM = 0.01
-    MM = 0.001
+    m = 1
+    dm = 0.1
+    cm = 0.01
+    mm = 0.001
+    µm = 0.000001
+    nm = 0.000000001
 
 class Action(Enum):
     SELECT = 0

@@ -112,9 +112,11 @@ class _IntrinsicsWidget(QWidget):
         rows_cam_mat = int(b_cam_mat.find('rows').text)
         cols_cam_mat = int(b_cam_mat.find('cols').text)
         cam_mat = b_cam_mat.find('data').text
-
-        width = Bs_data.find('image_Width').text
-        height = Bs_data.find('image_Height').text
+        print(len(Bs_data.find('image_Width').text))
+        print(Bs_data.find('image_Width').text)
+        width = int(Bs_data.find('image_Width').text)
+        
+        height = int(Bs_data.find('image_Height').text)
 
         intrinsics = {}
 
@@ -122,14 +124,15 @@ class _IntrinsicsWidget(QWidget):
         intrinsics["height"] = height
 
         intrinsics["camera matrix"] = {}
-        rows_cam_mat = int(b_cam_mat.find('rows').text)
         intrinsics["camera matrix"]["shape"] = [rows_cam_mat, cols_cam_mat]
         intrinsics["camera matrix"]["matrix"] = np.matrix(cam_mat).reshape((cols_cam_mat, rows_cam_mat)).tolist()
 
         intrinsics["distortion matrix"] = {}
-        rows_dist_coeffs = int(b_dist_coeffs.find('rows').text)
         intrinsics["distortion matrix"]["shape"] = [rows_dist_coeffs, cols_dist_coeffs]
         intrinsics["distortion matrix"]["matrix"] = np.matrix(dist_coeffs).reshape((cols_dist_coeffs, rows_dist_coeffs)).tolist()
+
+        print(intrinsics["camera matrix"]["matrix"])
+        print(["Hello", "Bonjour"])
 
         return intrinsics
         

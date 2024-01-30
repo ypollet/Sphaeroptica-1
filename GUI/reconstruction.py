@@ -49,9 +49,37 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import (
     QPixmap, QResizeEvent, QMouseEvent, QImage, QPalette, QIcon,
     QPaintEvent, QPainter, QBrush, QColor, QKeyEvent, QDoubleValidator,
-    QDragEnterEvent, QDropEvent, QDrag)
+    QDragEnterEvent, QDropEvent, QDrag, QScreen)
 from PySide6.QtCore import Qt, QRect, Signal, QSettings, QFileInfo, QEvent, QLocale, QMimeData, QSize
 
+class _Sphere(QLabel):
+
+    def __init__(self, parent):
+        super(_Sphere, self).__init__(parent)
+        #self.setScaledContents(True)
+        self.original_pixmap = None
+
+    def set_image(self, image_pixmap : QPixmap):
+        self.original_pixmap = image_pixmap
+        pixmap = image_pixmap.scaled(self.width(), self.height(), Qt.AspectRatioMode.KeepAspectRatio)
+        self.setPixmap(pixmap)
+
+    def resizeEvent(self, a0: QResizeEvent) -> None:
+        """When resizing the window, resize the image
+
+        Args:
+            a0 (QResizeEvent): event
+        """
+
+        try:
+            pixmap = self.original_pixmap
+            print(f"Sphere = {self.width(), self.height()} < {self.window().minimumWidth(), self.window().minimumHeight()}")
+            pixmap = pixmap.scaled(self.width(), self.height(), Qt.AspectRatioMode.KeepAspectRatio)
+            # pixmap.scaled(min(self.width(), self.window().maximumWidth()), min(self.height(), self.window().setMaximumHeigth()), Qt.AspectRatioMode.KeepAspectRatio)
+            self.setPixmap(pixmap)
+        except Exception as e:
+            print("Error in ResizeEvent : ", e)
+            pass
 
 class _AngleValues(QWidget):
     """Widget displaying the geographic value of the position of the virtual camera
@@ -119,7 +147,7 @@ class PictureButton(QLabel):
         if a0.button() == Qt.MouseButton.RightButton :
             #set that image as shortcut
             self.right_clicked.emit(self.key)
-            return       
+            return
 
 class QColorPixmap(QLabel):
     """Widget that show the referenced color for a point
@@ -456,7 +484,7 @@ class DistanceWidget(QWidget):
         self.reconstruction_settings = QSettings("Sphaeroptica", "reconstruction")
     
     def update_scale_settings(self):
-        """Update scale of the distance (M, CM or MM)
+        """Update scale of the distance (m, dm, cm, mm, µm, nm)
         """
 
         print(f"current text scale : {helpers.Scale[str(self.scale_widget.currentText())]}")
@@ -647,6 +675,8 @@ class Sphere3D(QWidget):
 
         self.init_dots()
 
+        self.setContentsMargins(5,5,5,5)
+
         # inverse
         self.move_from_arrow = {
             Qt.Key.Key_Up : (0,-1),
@@ -656,7 +686,7 @@ class Sphere3D(QWidget):
         }
         self.v_layout = QVBoxLayout()
         self.h_layout = QHBoxLayout()
-        self.sphere = QLabel()
+        self.sphere = _Sphere(self)
         self.sphere.setBackgroundRole(QPalette.ColorRole.Dark)
         self.directory = ""
         self.calibration_dict = {}
@@ -669,12 +699,11 @@ class Sphere3D(QWidget):
             #load last calibration file used
             self.load(calibration)
         
-        self.sphere.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        self.sphere.setContentsMargins(0,0,0,0)
+        self.sphere.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Ignored)
         self.sphere.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self._sphere_values = _AngleValues(self)
-        self._sphere_values.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
+        self._sphere_values.setSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Maximum)
 
         self._sphere_values.clicked.connect(self.values_clicked)
 
@@ -690,7 +719,7 @@ class Sphere3D(QWidget):
         self.commands_widget.dot_added.connect(self.add_dot)
         self.commands_widget.export.connect(self.export)
 
-        self.commands_widget.setSizePolicy(QSizePolicy.Policy.Maximum,QSizePolicy.Policy.Minimum)
+        self.commands_widget.setSizePolicy(QSizePolicy.Policy.Maximum,QSizePolicy.Policy.MinimumExpanding)
         self.commands_widget.setContentsMargins(0,0,0,0)
         self.h_layout.setSpacing(0)
         self.h_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
@@ -931,8 +960,7 @@ class Sphere3D(QWidget):
         pixmap = QPixmap.fromImage(qImg)'''
 
         pixmap = QPixmap(f'{self.directory}/{self.thumbnails}/{self.current_image}')
-        pixmap = pixmap.scaled(self.sphere.height(), self.sphere.width(), Qt.AspectRatioMode.KeepAspectRatio)
-        self.sphere.setPixmap(pixmap)
+        self.sphere.set_image(pixmap)
 
     def virtual_camera_extrinsics(self, extrinsics):
         """Deprecated Computes the virtual camera extrinsics
@@ -1115,22 +1143,6 @@ class Sphere3D(QWidget):
         self.activated = False
         self.last_pos = None
         self._old_angles = (self._angles_sphere[0], self._angles_sphere[1])
-    
-    def resizeEvent(self, a0: QResizeEvent) -> None:
-        """When resizing the window, resize the image
-
-        Args:
-            a0 (QResizeEvent): event
-        """
-
-        try:
-            self.current_image = self.get_nearest_image(self._angles_sphere)
-            pixmap = QPixmap(f'{self.directory}/{self.thumbnails}/{self.current_image}')
-            pixmap = pixmap.scaled(self.sphere.height(), self.sphere.width(), Qt.AspectRatioMode.KeepAspectRatio)
-            self.sphere.setPixmap(pixmap)
-        except Exception as e:
-            print("Error in ResizeEvent")
-            pass
 
     def export(self):
         """Export points into a csv
