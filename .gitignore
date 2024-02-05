@@ -19,3 +19,8 @@ README.pdf
 README.docx
 README.tex
 scripts/additional/import_cameras_from_colmap.py
+new_import_camera.csv
+new_import_camera_old.csv
+new_import_camera_stacked_big.csv
+new_import_camera_stacked.csv
+new_import_camera_stacked_old.csv
