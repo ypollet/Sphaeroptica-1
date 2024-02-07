@@ -87,34 +87,11 @@ if __name__ == '__main__':
         r32 = row["r32"]
         r33 = row["r33"]
         
-        # OPK
-        
-        # Matrix omega
-        Rx = np.matrix([[1, 0, 0],
-                        [0, math.cos(omega), -math.sin(omega)],
-                        [0, math.sin(omega), math.cos(omega)]])
-        # Matrix phi
-        Ry = np.matrix([[math.cos(phi), 0, math.sin(phi)],
-                        [0, 1, 0],
-                        [-math.sin(phi), 0, math.cos(phi)]])
-        # Matrix kappa
-        Rz = np.matrix([[math.cos(kappa), -math.sin(kappa), 0],
-                        [math.sin(kappa), math.cos(kappa), 0],
-                        [0, 0, 1]])
-
-
         #looks like it's zyx
-        mat = np.matrix([[r11, r12, r13],
+        mat = reconstruction.rotate_x_axis(math.radians(180)) @ np.matrix([[r11, r12, r13],
                         [r21, r22, r23],
                         [r31, r32, r33]])
-        mat_mul = np.matmul(Rx, np.matmul(Ry, Rz))
-        #mat = Rx.dot(Ry.dot(Rz))
-        # t = -RC
-
         t = np.array(-mat.dot(t_w)).T
-        
-        C = -np.transpose(mat)@t
-        print(f"{t_w} -> {C}")
 
         hola = np.hstack((mat, t))
         ext_mat = np.vstack((hola, [0,0,0,1]))

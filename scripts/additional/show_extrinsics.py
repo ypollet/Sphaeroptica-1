@@ -78,11 +78,11 @@ if __name__ == '__main__':
             ax.scatter(C.item(0), C.item(1), C.item(2), color="blue")
         
         ray_x = (rotation[0])
-        ax.quiver(C.item(0), C.item(1), C.item(2), ray_x.item(0), ray_x.item(1), ray_x.item(2), length=0.05, color="red")
+        ax.quiver(C.item(0), C.item(1), C.item(2), ray_x.item(0), ray_x.item(1), ray_x.item(2), length=0.35, color="red")
         ray_y = (rotation[1])
-        ax.quiver(C.item(0), C.item(1), C.item(2), ray_y.item(0), ray_y.item(1), ray_y.item(2), length=0.05, color="blue")
+        ax.quiver(C.item(0), C.item(1), C.item(2), ray_y.item(0), ray_y.item(1), ray_y.item(2), length=0.35, color="blue")
         ray_z = (rotation[2])
-        ax.quiver(C.item(0), C.item(1), C.item(2), ray_z.item(0), ray_z.item(1), ray_z.item(2), length=0.05, color="green")
+        ax.quiver(C.item(0), C.item(1), C.item(2), ray_z.item(0), ray_z.item(1), ray_z.item(2), length=0.35, color="green")
         if ray_x.dot(ray_y.T) > 1e-6 or ray_x.dot(ray_z.T) > 1e-6 or ray_z.dot(ray_y.T) > 1e-6 :
             print(f"Angles not perpendicular for image {image}")
         center += C
@@ -90,11 +90,11 @@ if __name__ == '__main__':
     print(center)
     ax.scatter(center.item(0), center.item(1), center.item(2), color="black", label='center')
     ray_x = np.array([1,0,0]).T
-    ax.quiver(center.item(0), center.item(1), center.item(2), ray_x.item(0), ray_x.item(1), ray_x.item(2), length=0.05, color="red")
+    ax.quiver(center.item(0), center.item(1), center.item(2), ray_x.item(0), ray_x.item(1), ray_x.item(2), length=0.35, color="red")
     ray_y = np.array([0,1,0]).T
-    ax.quiver(center.item(0), center.item(1), center.item(2), ray_y.item(0), ray_y.item(1), ray_y.item(2), length=0.05, color="blue")
+    ax.quiver(center.item(0), center.item(1), center.item(2), ray_y.item(0), ray_y.item(1), ray_y.item(2), length=0.35, color="blue")
     ray_z = np.array([0,0,1]).T
-    ax.quiver(center.item(0), center.item(1), center.item(2), ray_z.item(0), ray_z.item(1), ray_z.item(2), length=0.05, color="green")
+    ax.quiver(center.item(0), center.item(1), center.item(2), ray_z.item(0), ray_z.item(1), ray_z.item(2), length=0.35, color="green")
 
     '''
     ax.set_xlim3d(-0.3, 0.3)

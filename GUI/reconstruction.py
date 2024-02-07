@@ -837,6 +837,8 @@ class Sphere3D(QWidget):
 
         self.current_image = self.next_image()
 
+        print(f"Current image loaded : {self.current_image} wih pos {self._angles_sphere}")
+
         self.init_dots()
 
     def delete_dot(self, id):

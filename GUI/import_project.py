@@ -112,8 +112,6 @@ class _IntrinsicsWidget(QWidget):
         rows_cam_mat = int(b_cam_mat.find('rows').text)
         cols_cam_mat = int(b_cam_mat.find('cols').text)
         cam_mat = b_cam_mat.find('data').text
-        print(len(Bs_data.find('image_Width').text))
-        print(Bs_data.find('image_Width').text)
         width = int(Bs_data.find('image_Width').text)
         
         height = int(Bs_data.find('image_Height').text)
@@ -131,8 +129,6 @@ class _IntrinsicsWidget(QWidget):
         intrinsics["distortion matrix"]["shape"] = [rows_dist_coeffs, cols_dist_coeffs]
         intrinsics["distortion matrix"]["matrix"] = np.matrix(dist_coeffs).reshape((cols_dist_coeffs, rows_dist_coeffs)).tolist()
 
-        print(intrinsics["camera matrix"]["matrix"])
-        print(["Hello", "Bonjour"])
 
         return intrinsics
         
