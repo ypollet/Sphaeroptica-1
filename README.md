@@ -2,62 +2,13 @@
 
 Sphaeroptica 1.0 is an open-source viewer developed in Python and based on the principes of photogrammetry. It allows you to view specimens/objects with a sphere of pictures and to make measurements based on 3D landmarks without needing to compute a 3D model.
 
-## 1. How to make your own sphere of images
+## 1. Installation
 
-Sphaeroptica 1.0 needs has two requirements : 
-
-* A set of images taken around an object (at equal distance and with the same camera)
-* the calibration of these images
-
-### 1.1 Image Acquisition
-
-For the first requirement, every technique is allowed, as long as you have enough pictures to have enough overlap for their calibration. As it is very visual, because the virtual camera hops between each picture, it is encouraged to have enough pictures to have a smooth movement on it.
-
-In our case, we used [scAnt](https://github.com/evo-biomech/scAnt). We choose to have 180 pictures per specimen. 
-
-### 1.2 Focus Stacking (optional)
-
-It is necessary for smaller specimens with a lot of details, and focus stacking distortion is negligible for the calibration and triangulation (as our tests suggest and Olkowicz et al., 2019).
-
-The best stacker software that we have tested are Zerene Stacker and Helicon Focus ([Here](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4284632/)) and Helicon Focus uses the GPU for its computations (thus, is much faster).  
-However, these are softwares with a paid license. A free open-sourced solution would be Enfuse (even though it gives a halo around the object).
-
-### 1.3 Calibration
-
-For the calibration step, we would recommend you to use softwares that you are already used to. It will result on a faster and better process for you.  
-You have to simply make sure that the data that is exported from the software has to be in the form shown in [2.3](#2.3-Specify-the-intrinsic-and-extrinsic-files).
-
-In our case, we used Agisoft Metashape Professional Edition, a licensed photogrammetry software. And thus developed converters around the data that we get from Agisoft Metashape.
-
-If you use another software, you will have to convert the data yourself.  
-However, to make the program more accessible to every user, we are developing a converter from data exported by [COLMAP](https://github.com/colmap/colmap), as it is a free open-source project.
-
-Please, make sure that the pictures are correctly oriented (calibration) and rotated (rotation of the picture).  
-Sphaeroptica 1.0 does not change these parameters and not doing so could land some funny results.  
-Frontal view should be at (0,0) with lateral views at (-90,0) (right side) and (90,0) (left side). If needed, rotate the specimen in your SfM software before exporting its calibration parameters.
-
-#### 1.3.1 Convert from Metashape project
-
-If you use Agisoft Metashape, here are the steps you have to do to convert your data for Sphaeroptica 1.0.
-
-When your images are calibrated (with "Align Photos"), you can export the intrinsics parameters with  Tools > Camera Calibration > Adjusted, and export it in "OpenCV Camera Calibration (*.xml)" format. This will give you the file needed for the intrinsics values in Sphaeroptica 1.0.
-
-For the extrinsics, you have to go to File > Export > Export Cameras, and export the file as "Omega Phi Kappa (*txt)".  
-This CSV file still has to be converted into the needed JSON file.  
-Fortunately, we developed a script that does that and that is available at [scripts/additional/import_cameras_to_sphaeroptica.py](scripts/additional/import_cameras_to_sphaeroptica.py)
-
-```bash
-cd path/to/Sphaeroptica
-python3 scripts/additional/import_cameras_to_sphaeroptica.py -i path/to/csv.txt -o path/to/output.json
-```
-
-## 2. Installation
-
-### 2.1 Hardware requirements
+### 1.1 Hardware requirements
 
 We have been able to run Sphaeroptica 1.0 on a  laptop with an Intel i5-7200 and 8GB of RAM on Ubuntu 20.04. The program is not heavy at all.
 
-### 2.2 Software Requirements
+### 1.2 Software Requirements
 
 Here is the list of the requirements needed to run Sphaeropica :
 
@@ -79,7 +30,7 @@ pip3 install --no-binary opencv-python opencv-python
 ```
 
 
-#### 2.2.1 Conda
+#### 1.2.1 Conda
 The easiest way to install the requirements is to install the pre-configured Anaconda environment
 
 
@@ -101,7 +52,7 @@ After the initialization of the conda environment, restart the terminal and acti
 conda activate Sphaeroptica
 ```
 
-#### 2.2.2 Pip 
+#### 1.2.2 Pip 
 
 But if you prefer to install them through pip, we created a file that contains all the requirements, you can install them with these commands : 
 ```bash
@@ -111,6 +62,56 @@ or
 ```bash
 python3 -m pip install -r requirements.txt
 ``` 
+
+
+## 2. How to make your own sphere of images
+
+Sphaeroptica 1.0 needs has two requirements : 
+
+* A set of images taken around an object (at equal distance and with the same camera)
+* the calibration of these images
+
+### 2.1 Image Acquisition
+
+For the first requirement, every technique is allowed, as long as you have enough pictures to have enough overlap for their calibration. As it is very visual, because the virtual camera hops between each picture, it is encouraged to have enough pictures to have a smooth movement on it.
+
+In our case, we used [scAnt](https://github.com/evo-biomech/scAnt). We choose to have 180 pictures per specimen. 
+
+### 2.2 Focus Stacking (optional)
+
+It is necessary for smaller specimens with a lot of details, and focus stacking distortion is negligible for the calibration and triangulation (as our tests suggest and Olkowicz et al., 2019).
+
+The best stacker software that we have tested are Zerene Stacker and Helicon Focus ([Here](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4284632/)) and Helicon Focus uses the GPU for its computations (thus, is much faster).  
+However, these are softwares with a paid license. A free open-sourced solution would be Enfuse (even though it gives a halo around the object).
+
+### 2.3 Calibration
+
+For the calibration step, we would recommend you to use softwares that you are already used to. It will result on a faster and better process for you.  
+You have to simply make sure that the data that is exported from the software has to be in the form shown in [3.3](#3.3-Specify-the-intrinsic-and-extrinsic-files).
+
+In our case, we used Agisoft Metashape Professional Edition, a licensed photogrammetry software. And thus developed converters around the data that we get from Agisoft Metashape.
+
+If you use another software, you will have to convert the data yourself.  
+However, to make the program more accessible to every user, we are developing a converter from data exported by [COLMAP](https://github.com/colmap/colmap), as it is a free open-source project.
+
+Please, make sure that the pictures are correctly oriented (calibration) and rotated (rotation of the picture).  
+Sphaeroptica 1.0 does not change these parameters and not doing so could land some funny results.  
+Frontal view should be at (0,0) with lateral views at (-90,0) (right side) and (90,0) (left side). If needed, rotate the specimen in your SfM software before exporting its calibration parameters.
+
+#### 2.3.1 Convert from Metashape project
+
+If you use Agisoft Metashape, here are the steps you have to do to convert your data for Sphaeroptica 1.0.
+
+When your images are calibrated (with "Align Photos"), you can export the intrinsics parameters with  Tools > Camera Calibration > Adjusted, and export it in "OpenCV Camera Calibration (*.xml)" format. This will give you the file needed for the intrinsics values in Sphaeroptica 1.0.
+
+For the extrinsics, you have to go to File > Export > Export Cameras, and export the file as "Omega Phi Kappa (*txt)".  
+This CSV file still has to be converted into the needed JSON file.  
+Fortunately, we developed a script that does that and that is available at [scripts/additional/import_cameras_to_sphaeroptica.py](scripts/additional/import_cameras_to_sphaeroptica.py)
+
+```bash
+cd path/to/Sphaeroptica
+python3 scripts/additional/import_cameras_to_sphaeroptica.py -i path/to/csv.txt -o path/to/output.json
+```
 
 ## 3. Create a Sphaeroptica 1.0 project
 
@@ -149,20 +150,20 @@ The file should look like this :
 <?xml version="1.0"?>
 <opencv_storage>
 <calibration_Time>"Mon Apr 17 14:24:32 2023"</calibration_Time>
-<image_Width>5472</image_Width>
-<image_Height>3648</image_Height>
-<Camera_Matrix type_id="opencv-matrix">
+<image_Width>width</image_Width>
+<image_Height>height</image_Height>
+<Camera_Matrix>
   <rows>3</rows>
   <cols>3</cols>
   <dt>d</dt>
   <data>
     fx 0. cx 0. fy cy 0. 0. 1.</data></Camera_Matrix>
-<Distortion_Coefficients type_id="opencv-matrix">
-  <rows>5</rows>
+<Distortion_Coefficients>
+  <rows>n</rows>
   <cols>1</cols>
   <dt>d</dt>
   <data>
-    k1 k2 p1 p2 k3</data></Distortion_Coefficients>
+    k1 k2 p1 p2 ...</data></Distortion_Coefficients>
 </opencv_storage>
 ```
 
