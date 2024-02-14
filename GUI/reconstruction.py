@@ -459,7 +459,7 @@ class DistanceWidget(QWidget):
             self.scale_widget.addItem(key)
         print(f"Current scale : {self.reconstruction_settings.value('scale')}")
 
-        self.scale_widget.setCurrentText(self.reconstruction_settings.value("scale").name if self.reconstruction_settings.value("scale") is not None else helpers.Scale.M.name)
+        self.scale_widget.setCurrentText(self.reconstruction_settings.value("scale").name if self.reconstruction_settings.value("scale") is not None else helpers.Scale.m.name)
         self.scale_widget.currentTextChanged.connect(self.update_scale_settings)
         self.distance.addWidget(self.scale_widget)
 
