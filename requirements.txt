@@ -6,3 +6,4 @@ opencv-python
 matplotlib
 imutils
 bs4
+lxml

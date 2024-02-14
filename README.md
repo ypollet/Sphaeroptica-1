@@ -21,6 +21,7 @@ Here is the list of the requirements needed to run Sphaeropica :
 * matplotlib
 * pandas
 * bs4
+* lxml
 
 Make sure that only opencv-python is installed, installing other opencv packages can create some bugs.
 
@@ -66,7 +67,7 @@ python3 -m pip install -r requirements.txt
 
 ## 2. How to make your own sphere of images
 
-Sphaeroptica 1.0 needs has two requirements : 
+Sphaeroptica 1.0 has two requirements : 
 
 * A set of images taken around an object (at equal distance and with the same camera)
 * the calibration of these images
