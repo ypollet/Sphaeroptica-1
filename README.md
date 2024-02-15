@@ -116,6 +116,8 @@ python3 scripts/additional/import_cameras_to_sphaeroptica.py -i path/to/csv.txt 
 
 ## 3. Create a Sphaeroptica 1.0 project
 
+Tutorial video for this section : [Sphaeroptica Tutorial #1 : Import your project on Sphaeroptica](https://youtu.be/hoU15A5skak)
+
 Start the application :
 
 ```bash
@@ -211,6 +213,9 @@ The folder structure will look like this :
 ```
 
 ## 4. Virtual camera
+
+Tutorial video for this section : [Sphaeroptica Tutorial #2 : Use the virtual camera](https://youtu.be/WJiIOhUvwcQ)
+
 When you open any project, the first window you will see is the virtual camera
 
 ![Screen of the application](./images/page_full.png)
@@ -256,6 +261,8 @@ There is also a keyboard version of these shortcuts :
 e.g. pressing F would set the virtual camera to the Frontal view
 
 ## 5. Landmarks Placement
+
+Tutorial video for this section : [Sphaeroptica Tutorial #3 : Landmarks](https://youtu.be/K1Bz2uz1EJw)
 
 The main feature of Sphaeroptica 1.0 is the possibility to create landmarks and compute their 3D positions.  
 For this, we need to configure the landmark and to place it on at least 2 oriented images.
@@ -317,6 +324,8 @@ It is possible to adjust the size of the landmarks placed on the image.
 However, be aware that making the landmark bigger, even if it makes it easier to find, makes it harder to know where it is precisely located.
 
 ## 6. Measurements
+
+Tutorial video for this section : [Sphaeroptica Tutorial #4 : computation of distances](https://youtu.be/2HylcnIiDyY)
 
 When two landmarks have a 3D position, we can measure the distance between them two.
 
