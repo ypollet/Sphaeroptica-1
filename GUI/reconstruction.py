@@ -49,7 +49,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import (
     QPixmap, QResizeEvent, QMouseEvent, QImage, QPalette, QIcon,
     QPaintEvent, QPainter, QBrush, QColor, QKeyEvent, QDoubleValidator,
-    QDragEnterEvent, QDropEvent, QDrag, QScreen)
+    QDragEnterEvent, QDropEvent, QDrag)
 from PySide6.QtCore import Qt, QRect, Signal, QSettings, QFileInfo, QEvent, QLocale, QMimeData, QSize
 
 class _Sphere(QLabel):

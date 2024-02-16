@@ -28,13 +28,6 @@
 
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-import sys
-import os
- 
-# setting path
-print(__file__)
-sys.path.append(os.path.realpath(f"{__file__}/../.."))
-
 import json
 import numpy as np
 import pandas as pd

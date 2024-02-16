@@ -28,19 +28,10 @@
 
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-import sys
-import os
- 
-# setting path
-print(__file__)
-sys.path.append(os.path.realpath(f"{__file__}/../.."))
-
-
 from matplotlib import pyplot as plt
 import json
 import numpy as np
 from scripts import converters
-import os
 import argparse
 from pathlib import Path
 
@@ -62,44 +53,52 @@ if __name__ == '__main__':
     dist = 0
     center = np.array([[0.0],[0.0],[0.0]])
 
-    proj_points = []
+    centers = [[],[],[]] #lim x_y_z
+    rotations = [[[] for _ in range(3)] for _ in range(3)] # makes a 3D array 3*3*N for each x_ij of rotation matrices
     for image in extrinsics:
         matrix = np.matrix(extrinsics[image]["matrix"])
         rotation = matrix[0:3,0:3]
         trans = matrix[0:3,3]
         C = converters.get_camera_world_coordinates(rotation, trans)
-        if image.startswith('_x_00200_'):
-            if image == '_x_00200_y_00000_.jpg':
-                ax.scatter(C.item(0), C.item(1), C.item(2), color="green", label="frontal view")
-            else:
-                ax.scatter(C.item(0), C.item(1), C.item(2), color="red")
-            
-        else:
-            ax.scatter(C.item(0), C.item(1), C.item(2), color="blue")
         
-        ray_x = (rotation[0])
-        ax.quiver(C.item(0), C.item(1), C.item(2), ray_x.item(0), ray_x.item(1), ray_x.item(2), length=0.35, color="red")
-        ray_y = (rotation[1])
-        ax.quiver(C.item(0), C.item(1), C.item(2), ray_y.item(0), ray_y.item(1), ray_y.item(2), length=0.35, color="blue")
-        ray_z = (rotation[2])
-        ax.quiver(C.item(0), C.item(1), C.item(2), ray_z.item(0), ray_z.item(1), ray_z.item(2), length=0.35, color="green")
-        if ray_x.dot(ray_y.T) > 1e-6 or ray_x.dot(ray_z.T) > 1e-6 or ray_z.dot(ray_y.T) > 1e-6 :
+        centers[0].append(C.item(0)) # x
+        centers[1].append(C.item(1)) # y
+        centers[2].append(C.item(2)) # z
+        
+        for idx, val in np.ndenumerate(rotation):
+            rotations[idx[0]][idx[1]].append(val)
+
+        if rotation[0].dot(rotation[1].T) > 1e-6 or rotation[0].dot(rotation[2].T) > 1e-6 or rotation[2].dot(rotation[1].T) > 1e-6 :
+            # Simply checks that all the angles of the rot matrix are perpendicular
             print(f"Angles not perpendicular for image {image}")
         center += C
+
+    # get dimensions of plot
+    limits = [[min(i), max(i)] for i in centers]
+    dimension = max([i[1] - i[0] for i in limits])
+
+    
+    # plot cameras
+    ax.scatter(centers[0], centers[1], centers[2], color="blue")
+    ax.quiver(centers[0], centers[1], centers[2], rotations[0][0], rotations[0][1], rotations[0][2], length=dimension*0.1, color="red")
+    ax.quiver(centers[0], centers[1], centers[2], rotations[1][0], rotations[1][1], rotations[1][2], length=dimension*0.1, color="blue")
+    ax.quiver(centers[0], centers[1], centers[2], rotations[2][0], rotations[2][1], rotations[2][2], length=dimension*0.1, color="green")
+    # plot center
     center = center/len(extrinsics)
     print(center)
     ax.scatter(center.item(0), center.item(1), center.item(2), color="black", label='center')
     ray_x = np.array([1,0,0]).T
-    ax.quiver(center.item(0), center.item(1), center.item(2), ray_x.item(0), ray_x.item(1), ray_x.item(2), length=0.35, color="red")
+    ax.quiver(center.item(0), center.item(1), center.item(2), ray_x.item(0), ray_x.item(1), ray_x.item(2), length=dimension*0.15, color="red")
     ray_y = np.array([0,1,0]).T
-    ax.quiver(center.item(0), center.item(1), center.item(2), ray_y.item(0), ray_y.item(1), ray_y.item(2), length=0.35, color="blue")
+    ax.quiver(center.item(0), center.item(1), center.item(2), ray_y.item(0), ray_y.item(1), ray_y.item(2), length=dimension*0.15, color="blue")
     ray_z = np.array([0,0,1]).T
-    ax.quiver(center.item(0), center.item(1), center.item(2), ray_z.item(0), ray_z.item(1), ray_z.item(2), length=0.35, color="green")
+    ax.quiver(center.item(0), center.item(1), center.item(2), ray_z.item(0), ray_z.item(1), ray_z.item(2), length=dimension*0.15, color="green")
 
-    '''
-    ax.set_xlim3d(-0.3, 0.3)
-    ax.set_ylim3d(-0.3, 0.3)
-    ax.set_zlim3d(-0.22, 0.22)'''
+    avg = [np.average(i) for i in limits]
+    ax.set_xlim3d(avg[0]-(dimension/2*1.1), avg[0]+(dimension/2*1.1))
+    ax.set_ylim3d(avg[1]-(dimension/2*1.1), avg[1]+(dimension/2*1.1))
+    ax.set_zlim3d(avg[2]-(dimension/2*1.1), avg[2]+(dimension/2*1.1))
+
     plt.legend(loc="upper right")
     plt.show()
 

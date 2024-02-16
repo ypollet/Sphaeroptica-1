@@ -30,17 +30,16 @@
 
 
 import sys
-# setting path
-sys.path.append('.')
+
 
 from PySide6.QtWidgets import (
     QMainWindow, QStackedLayout, QWidget
 )
 from PySide6.QtGui import (
-    QAction, QIcon, QResizeEvent
+    QAction, QIcon
 )
 from PySide6.QtCore import (
-    QSettings, QRect
+    QSettings
 )
 from GUI.reconstruction import ReconstructionWidget
 from GUI.home import HomeWidget

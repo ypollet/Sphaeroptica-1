@@ -334,6 +334,26 @@ def intersectPlane(normal, center_plane, start_ray, ray):
     #if it's parralel there is no intersection
     return None
 
+def intersectionVectors(points, lines):
+    if len(points) != len(lines):
+        return None
+    A = None
+    b = None
+    for i in range(len(points)):
+        
+        A = np.concatenate([A, view]) if A is not None else view
+        b = np.concatenate([b, sol]) if b is not None else sol
+    
+    U, s, Vh = np.linalg.svd(A, full_matrices = False)
+    b_prime = np.transpose(U)@b
+    
+    y = (b_prime.T/s).T
+
+    h = np.transpose(Vh)@y
+    h = np.concatenate([h, np.matrix([1.0])])
+    return h.reshape(3,3)
+
+
 
 ###########################################################################################################
 #

@@ -28,21 +28,15 @@
 
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-
-from logging.handlers import QueueHandler
-
 import sys
-# setting path
-sys.path.append('./GUI')
 
-from typing import Tuple
 from PySide6.QtWidgets import (
     QApplication
 )
 
-from PySide6.QtGui import QScreen
-
 import GUI.main as main
+
+print(sys.path)
 
 app = QApplication(sys.argv)
 

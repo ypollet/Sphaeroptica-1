@@ -35,11 +35,11 @@ from PySide6.QtGui import QImage, QPixmap, QPalette, QPainter, QAction, QMouseEv
 from PySide6.QtWidgets import (QWidget, QLabel, QSizePolicy, QScrollArea, QMessageBox, QMainWindow, QMenu, QApplication, QScrollBar, QHBoxLayout, 
                              QVBoxLayout, QPushButton, QSpinBox, QScroller)
 
-from scripts import helpers, reconstruction
+from scripts import helpers
 
 INIT_POINT_WIDTH = 3
 class QImageLabel(QLabel):
-    def __init__(self, parent : QWidget, image : QImage, base_factor : float, dots : list(), point_scale : int):
+    def __init__(self, parent : QWidget, image : QImage, base_factor : float, dots : list, point_scale : int):
         super(QImageLabel, self).__init__(parent)
         self.dots = dots
         self.visible = [True for i in self.dots]
