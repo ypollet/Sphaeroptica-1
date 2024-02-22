@@ -334,13 +334,51 @@ def intersectPlane(normal, center_plane, start_ray, ray):
     #if it's parralel there is no intersection
     return None
 
+def sphereFit(spX,spY,spZ):
+    """Method by Charles Jekel, I just used SVD to solve the least squared problem
+
+    Args:
+        spX (_type_): _description_
+        spY (_type_): _description_
+        spZ (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
+    #   Assemble the A matrix
+    spX = np.array(spX)
+    spY = np.array(spY)
+    spZ = np.array(spZ)
+    A = np.zeros((len(spX),4))
+    A[:,0] = spX*2
+    A[:,1] = spY*2
+    A[:,2] = spZ*2
+    A[:,3] = 1
+
+    #   Assemble the b matrix
+    b = np.zeros((len(spX),1))
+    b[:,0] = (spX*spX) + (spY*spY) + (spZ*spZ)
+
+    #solve SVD
+    U, s, Vh = np.linalg.svd(A, full_matrices = False)
+    b_prime = np.transpose(U)@b
+    
+    y = (b_prime.T/s).T
+
+    C = np.transpose(Vh)@y
+    t = (C[0]*C[0])+(C[1]*C[1])+(C[2]*C[2])+C[3]
+    radius = math.sqrt(t)
+
+    return radius, C[0:3]
+
+''' # TODO
 def intersectionVectors(points, lines):
     if len(points) != len(lines):
         return None
     A = None
     b = None
     for i in range(len(points)):
-        
+        lines = np.matrix([])
         A = np.concatenate([A, view]) if A is not None else view
         b = np.concatenate([b, sol]) if b is not None else sol
     
@@ -351,7 +389,7 @@ def intersectionVectors(points, lines):
 
     h = np.transpose(Vh)@y
     h = np.concatenate([h, np.matrix([1.0])])
-    return h.reshape(3,3)
+    return h.reshape(3,3)'''
 
 
 

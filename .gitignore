@@ -25,3 +25,5 @@ new_import_camera_stacked_big.csv
 new_import_camera_stacked.csv
 new_import_camera_stacked_old.csv
 import_extrinsics_from_colmap.py
+scripts/additional/import_extrinsics_from_colmap.py
+scripts/additional/import_intrinsics_from_colmap.py

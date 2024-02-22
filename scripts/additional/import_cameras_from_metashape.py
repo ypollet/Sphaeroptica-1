@@ -44,6 +44,8 @@ if __name__ == '__main__':
     ap = argparse.ArgumentParser()
     ap.add_argument("-i", "--input", required=True,
                     help="path to input OPK File")
+    ap.add_argument("-f", "--format", required=True,
+                    help="format of the files")
     ap.add_argument("-o", "--output", required=False, default=None,
                     help="path to output JSON File")
     args = vars(ap.parse_args())
@@ -88,7 +90,7 @@ if __name__ == '__main__':
         hola = np.hstack((mat, t))
         ext_mat = np.vstack((hola, [0,0,0,1]))
         
-        extrinsics[f'{row["Label"]}.jpg'] = {"matrix" : ext_mat.tolist()}
+        extrinsics[f'{row["Label"]}.{Path(args["format "])}'] = {"matrix" : ext_mat.tolist()}
     
     output_path = ""
     if args["output"] is None:
