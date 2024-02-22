@@ -56,10 +56,9 @@ if __name__ == '__main__':
 
     centers = [[],[],[]] #lim x_y_z
     rotations = [[[] for _ in range(3)] for _ in range(3)] # makes a 3D array 3*3*N for each x_ij of rotation matrices
-    for image in extrinsics:
 
-        if not image.startswith("_x_00000") and not image.startswith("_x_00350"):
-            continue
+    print(f"Len images = {len(extrinsics)}")
+    for image in extrinsics:
         matrix = np.matrix(extrinsics[image]["matrix"])
         rotation = matrix[0:3,0:3]
         trans = matrix[0:3,3]
@@ -110,7 +109,6 @@ if __name__ == '__main__':
     ax.plot_surface(x, y, z, color="black", alpha=0.1)
 
     avg = [np.average(i) for i in limits]
-    print(dimension/2*1.2)
     ax.set_xlim3d(avg[0]-(dimension/2*1.2), avg[0]+(dimension/2*1.2))
     ax.set_ylim3d(avg[1]-(dimension/2*1.2), avg[1]+(dimension/2*1.2))
     ax.set_zlim3d(avg[2]-(dimension/2*1.2), avg[2]+(dimension/2*1.2))

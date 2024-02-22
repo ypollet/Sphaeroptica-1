@@ -17,17 +17,17 @@ Here is the list of the requirements needed to run Sphaeropica :
 * scipy
 * PySide6
 * imutils
-* opencv-python
+* opencv-contrib-python
 * matplotlib
 * pandas
 * bs4
 * lxml
 
-Make sure that only opencv-python is installed, installing other opencv packages can create some bugs.
+Make sure that only opencv-contrib-python is installed, installing other opencv packages can create some bugs.
 
-If OpenCV and PySide6 show an error, uninstall opencv-python and use this command to install it :
+If OpenCV and PySide6 show an error, uninstall opencv-contrib-python and use this command to install it :
 ```
-pip3 install --no-binary opencv-python opencv-python
+pip3 install --no-binary opencv-contrib-python opencv-contrib-python
 ```
 
 

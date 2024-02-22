@@ -778,7 +778,12 @@ class Sphere3D(QWidget):
         #Compute an approximately estimated center of the sphere of images
         cx, cy = intrinsics.item(0,2), intrinsics.item(1,2)
         image_sorted = sorted(images_thumbnails)
-        point = reconstruction.Point3D(-1, "center")
+
+        centers = []
+        directions = []
+        centers_x = []
+        centers_y = []
+        centers_z = [] #centers,  x_y_z
         for path in image_sorted:
             file_name = os.path.basename(path)
             if file_name not in self.calibration_dict["extrinsics"]:
@@ -788,32 +793,36 @@ class Sphere3D(QWidget):
             rotation = mat[0:3, 0:3]
             trans = mat[0:3, 3]
             C = converters.get_camera_world_coordinates(rotation, trans)
-            point.add_dot(file_name, helpers.Point(cx, cy))
-
+            centers.append(C)
+            directions.append(rotation[2]) # Add Z axis as direction
+            centers_x.append(C.item(0)) # x
+            centers_y.append(C.item(1)) # y
+            centers_z.append(C.item(2)) # z
             image_calibration[file_name] = C
 
-        point.set_position(self.estimate_position(point))
-        self.center = np.matrix(point.get_position()[:3]).T
+        _, self.center = reconstruction.sphereFit(centers_x, centers_y, centers_z)
+        intersect = reconstruction.intersectRays(centers, directions)
+        print(f"Center = {self.center.T}")
+        print(f"Intersect = {intersect.T}")
 
-        print(f"Center = {self.center}")
+        for path in image_sorted:
+            file_name = os.path.basename(path)
+            if file_name not in self.calibration_dict["extrinsics"]:
+                #checks if it's an image and if it's calibrated
+                continue
+            mat = np.matrix(self.calibration_dict["extrinsics"][file_name]["matrix"])
+            rotation = mat[0:3, 0:3]
+            trans = mat[0:3, 3]
+            C = converters.get_camera_world_coordinates(rotation, trans)
+            print(reconstruction.get_distance(self.center, C), reconstruction.get_distance(intersect, C))
 
         keys = sorted(image_calibration.keys())
 
-        mean_error = 0
         nbr_img = 0
         self.lowest_lat = float('inf')
         self.highest_lat = -float('inf')
         for file_name in keys:
-            
-            # compute error of the estimated center (can be high) 
-            pos = np.matrix([list(point.position)])
-            img_point_1 = np.matrix([point.get_image_dots(file_name).to_array()])
-
-            extrinsics = np.matrix(self.calibration_dict["extrinsics"][file_name]["matrix"])[0:3, 0:4]
-                    
-            imgpoints2 = reconstruction.project_points(pos, intrinsics, extrinsics, distCoeffs).reshape((1,2))
-            error = cv.norm(img_point_1, imgpoints2, cv.NORM_L2)/len(imgpoints2)
-            mean_error += error
+            extrinsics = np.matrix(self.calibration_dict["extrinsics"][file_name]["matrix"])[0:3, 0:4]                   
             nbr_img += 1
 
             # compute geographic coordinates and use them as key for the virtual camera
@@ -829,8 +838,6 @@ class Sphere3D(QWidget):
             self.images[key] = file_name
 
             rotation = extrinsics[0:3,0:3]
-        if nbr_img != 0:
-            print(f"total error: {mean_error/nbr_img}")
         
         print(f"Lowest = {self.lowest_lat}; Highest = {self.highest_lat}")
         print(f"Number images = {nbr_img}")

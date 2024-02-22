@@ -371,6 +371,23 @@ def sphereFit(spX,spY,spZ):
 
     return radius, C[0:3]
 
+def intersectRays(centers, directions):
+    identity = np.identity(3)
+
+    M = np.zeros((3,3))
+    P = np.zeros((3,1))
+    for idx, center in enumerate(centers):
+        direction_vector = np.array(directions[idx])
+        num = np.dot(direction_vector, direction_vector.T)
+        den = 1 #np.dot(direction_vector.T, direction_vector)
+        M_k = identity - np.divide(num,den)
+        M += M_k
+        P += M_k @ center
+    origin = np.linalg.inv(M)@ P
+    return origin
+    
+    
+
 ''' # TODO
 def intersectionVectors(points, lines):
     if len(points) != len(lines):
