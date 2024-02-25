@@ -379,35 +379,28 @@ def intersectRays(centers, directions):
     for idx, center in enumerate(centers):
         direction_vector = np.array(directions[idx])
         num = np.dot(direction_vector, direction_vector.T)
-        den = 1 #np.dot(direction_vector.T, direction_vector)
+        den = np.dot(direction_vector.T, direction_vector)
         M_k = identity - np.divide(num,den)
         M += M_k
         P += M_k @ center
     origin = np.linalg.inv(M)@ P
+
+    #compute error
+    sum_error = 0
+    for idx, center in enumerate(centers):
+        sum_error = distancePointLine(origin, center, directions[idx])**2
+
+    print(f"Error : {sum_error}")
     return origin
     
-    
+def distancePointLine(point, origin, direction_vector):
+    point = point.reshape(1,3)
+    origin = origin.reshape(1,3)
+    direction_vector = direction_vector.reshape(1,3)
+    t_a = -(direction_vector.item(0)*(origin.item(0)-point.item(0))+ direction_vector.item(1)*(origin.item(1)-point.item(1)) + direction_vector.item(2)*(origin.item(2)-point.item(2)))/(direction_vector.item(0)**2+ direction_vector.item(1)**2 +direction_vector.item(2)**2)
+    a = origin + np.multiply(t_a, direction_vector)
 
-''' # TODO
-def intersectionVectors(points, lines):
-    if len(points) != len(lines):
-        return None
-    A = None
-    b = None
-    for i in range(len(points)):
-        lines = np.matrix([])
-        A = np.concatenate([A, view]) if A is not None else view
-        b = np.concatenate([b, sol]) if b is not None else sol
-    
-    U, s, Vh = np.linalg.svd(A, full_matrices = False)
-    b_prime = np.transpose(U)@b
-    
-    y = (b_prime.T/s).T
-
-    h = np.transpose(Vh)@y
-    h = np.concatenate([h, np.matrix([1.0])])
-    return h.reshape(3,3)'''
-
+    return get_distance(np.squeeze(np.array(point)), np.squeeze(np.array(a)))
 
 
 ###########################################################################################################

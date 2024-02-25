@@ -28,6 +28,10 @@
 
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+import sys
+
+sys.path.append("/home/broot/Numerisation/Sphaeroptica")
+
 import json
 import pandas as pd
 import numpy as np
@@ -35,12 +39,15 @@ import math
 import argparse
 from pathlib import Path
 
+import sys
+
 from scipy.spatial.transform import Rotation as R
 
 from scripts import reconstruction, converters
 
 if __name__ == '__main__':
 
+    print(print(sys.path))
     ap = argparse.ArgumentParser()
     ap.add_argument("-i", "--input", required=True,
                     help="path to input OPK File")
@@ -51,7 +58,6 @@ if __name__ == '__main__':
     args = vars(ap.parse_args())
 
     input_path = Path(args["input"])
-
     df = pd.read_csv(input_path, sep='\t', header=None, names=["Label","X","Y","Z","Omega","Phi","Kappa","r11","r12","r13","r21","r22","r23","r31","r32","r33"])
 
     df = df.dropna()
@@ -66,9 +72,9 @@ if __name__ == '__main__':
 
         t_w = np.array([x,y,z])
 
-        omega = converters.degrees2rad(-row["Omega"])
-        phi = converters.degrees2rad(-row["Phi"])
-        kappa = converters.degrees2rad(-row["Kappa"])
+        omega = converters.degrees2rad(row["Omega"])
+        phi = converters.degrees2rad(row["Phi"])
+        kappa = converters.degrees2rad(row["Kappa"])
 
         
         r11 = row["r11"]
@@ -87,10 +93,20 @@ if __name__ == '__main__':
                         [r31, r32, r33]])
         t = np.array(-mat.dot(t_w)).T
 
+        o_p_k = np.array([-np.pi-omega, phi, kappa])
+        rot = R.from_euler('xyz', o_p_k)
+        rot_mat = rot.as_matrix()
+
+        rot_mat2 = reconstruction.rotate_x_axis(np.pi+omega)  @ reconstruction.rotate_y_axis(phi) @ reconstruction.rotate_z_axis(kappa)
+
+        print(mat)
+        print(rot_mat)
+        print(rot_mat2)
+        print("-----------------------------------------------------------")
         hola = np.hstack((mat, t))
         ext_mat = np.vstack((hola, [0,0,0,1]))
         
-        extrinsics[f'{row["Label"]}.{Path(args["format "])}'] = {"matrix" : ext_mat.tolist()}
+        extrinsics[f'{row["Label"]}.{Path(args["format"])}'] = {"matrix" : ext_mat.tolist()}
     
     output_path = ""
     if args["output"] is None:

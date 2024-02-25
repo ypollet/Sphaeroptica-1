@@ -457,7 +457,6 @@ class DistanceWidget(QWidget):
         self.scale_widget = QComboBox(self)
         for key in helpers.Scale._member_map_.keys():
             self.scale_widget.addItem(key)
-        print(f"Current scale : {self.reconstruction_settings.value('scale')}")
 
         self.scale_widget.setCurrentText(self.reconstruction_settings.value("scale").name if self.reconstruction_settings.value("scale") is not None else helpers.Scale.m.name)
         self.scale_widget.currentTextChanged.connect(self.update_scale_settings)
@@ -814,7 +813,7 @@ class Sphere3D(QWidget):
             rotation = mat[0:3, 0:3]
             trans = mat[0:3, 3]
             C = converters.get_camera_world_coordinates(rotation, trans)
-            print(reconstruction.get_distance(self.center, C), reconstruction.get_distance(intersect, C))
+            #print(reconstruction.get_distance(self.center, C), reconstruction.get_distance(intersect, C))
 
         keys = sorted(image_calibration.keys())
 
@@ -842,7 +841,7 @@ class Sphere3D(QWidget):
         print(f"Lowest = {self.lowest_lat}; Highest = {self.highest_lat}")
         print(f"Number images = {nbr_img}")
 
-        self.current_image = self.next_image()
+        self.next_image()
 
         print(f"Current image loaded : {self.current_image} wih pos {self._angles_sphere}")
 
