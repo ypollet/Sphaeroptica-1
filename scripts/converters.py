@@ -67,7 +67,7 @@ def get_camera_world_coordinates(rotation, trans):
         np.ndarray: world coordinate matrix
     """
 
-    # - R_t @ T
+    # - (R_t @ T)
     return -rotation.T.dot(trans)
 
 def get_trans_vector(rotation, C):
