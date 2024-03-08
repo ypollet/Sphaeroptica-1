@@ -800,18 +800,7 @@ class Sphere3D(QWidget):
             image_calibration[file_name] = C
 
         _, self.center = reconstruction.sphereFit(centers_x, centers_y, centers_z)
-        #intersect = reconstruction.intersectRays(centers, directions)
-
-        for path in image_sorted:
-            file_name = os.path.basename(path)
-            if file_name not in self.calibration_dict["extrinsics"]:
-                #checks if it's an image and if it's calibrated
-                continue
-            mat = np.matrix(self.calibration_dict["extrinsics"][file_name]["matrix"])
-            rotation = mat[0:3, 0:3]
-            trans = mat[0:3, 3]
-            C = converters.get_camera_world_coordinates(rotation, trans)
-            #print(reconstruction.get_distance(self.center, C), reconstruction.get_distance(intersect, C))
+        #intersect = reconstruction.intersectRays(centers, directions)s
 
         keys = sorted(image_calibration.keys())
 
