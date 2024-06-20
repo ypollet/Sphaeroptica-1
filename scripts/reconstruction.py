@@ -197,7 +197,6 @@ def triangulate_point(proj_points):
     U, s, Vh = np.linalg.svd(A, full_matrices = False)
 
     X = np.squeeze(np.asarray(Vh[-1,:]))
-    print(X.shape)
 
     return scale_homogeonous_point(X)
 
@@ -214,7 +213,7 @@ def project_points(point3D, intrinsics, extrinsics, dist_coeffs=np.matrix([0 for
         np.array: the pixel of the reprojection
     """
 
-    point = intrinsics@extrinsics@point3D.T
+    point = intrinsics @ extrinsics @ point3D.T
     factor = point[2]
     pos = np.array([0,0])
     for i in range(len(pos)):

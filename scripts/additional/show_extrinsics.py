@@ -87,9 +87,9 @@ if __name__ == '__main__':
     
     # plot cameras
     ax.scatter(centers[0], centers[1], centers[2], color="blue")
-    ax.quiver(centers[0], centers[1], centers[2], rotations[0][0], rotations[0][1], rotations[0][2], length=dimension*0.1, color="red")
+    '''ax.quiver(centers[0], centers[1], centers[2], rotations[0][0], rotations[0][1], rotations[0][2], length=dimension*0.1, color="red")
     ax.quiver(centers[0], centers[1], centers[2], rotations[1][0], rotations[1][1], rotations[1][2], length=dimension*0.1, color="blue")
-    ax.quiver(centers[0], centers[1], centers[2], rotations[2][0], rotations[2][1], rotations[2][2], length=dimension*0.1, color="green")
+    ax.quiver(centers[0], centers[1], centers[2], rotations[2][0], rotations[2][1], rotations[2][2], length=dimension*0.1, color="green")'''
     # plot center
     radius, center = reconstruction.sphereFit(centers[0], centers[1], centers[2])
     print(center)

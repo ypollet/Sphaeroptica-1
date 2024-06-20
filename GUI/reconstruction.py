@@ -732,13 +732,13 @@ class Sphere3D(QWidget):
 
         self.setContentsMargins(0,0,0,0)
     
-    def init_dots(self):
-        """Creates the first dot when we open the app
+    def init_landmarks(self):
+        """Creates the first landmark when we open the app
         """
          
         # Point3D.id -> Point3D
-        self.dots = list()
-        self.dots.append(reconstruction.Point3D(0, 'Point_0', QColor('blue')))
+        self.landmarks = list()
+        self.landmarks.append(reconstruction.Point3D(0, 'Point_0', QColor('blue')))
         QColor('blue').value()
     
     def load(self, calibration : QFileInfo):
@@ -1153,45 +1153,50 @@ class Sphere3D(QWidget):
         self._old_angles = (self._angles_sphere[0], self._angles_sphere[1])
 
     def export(self):
-        """Export points into a csv
+        """Export points into a json file
         """
 
-        df = pd.DataFrame(columns=["Color", "X", "Y", "Z", "X_adjusted", "Y_adjusted", "Z_adjusted"])
-        df.rename_axis("Label")
+        json_dict = dict()
         centroid_x = []
         centroid_y = []
         centroid_z = []
         scale_factor = self.commands_widget.distance_calculator.scale_factor
 
-        dots_with_pos = [dot for dot in self.dots if dot.get_position() is not None]
+        landmarks_with_pos = [landmark for landmark in self.landmarks if landmark.get_position() is not None]
 
-        if len(dots_with_pos) == 0:
+        if len(landmarks_with_pos) == 0:
             print("Export cancelled")
             return
 
         # QDialog to get list of points use to compute the centroid
-        list_dots_centroid = self.get_list_dots_for_centroid(dots_with_pos)
+        list_landmarks_centroid = self.get_list_landmarks_for_centroid(landmarks_with_pos)
 
-        if list_dots_centroid is None:
+        if list_landmarks_centroid is None:
             return
 
-        for dot in dots_with_pos:
-            pos = dot.get_position()
+        for landmark in landmarks_with_pos:
+            pos = landmark.get_position()
             
-            df.loc[dot.get_label()] = [dot.get_color().name(), pos[0], pos[1], pos[2], pos[0]*scale_factor, pos[1]*scale_factor, pos[2]*scale_factor]
-            if dot.id in list_dots_centroid :
+            json_dict[landmark.get_label()] = { 
+                "color": landmark.get_color().name(), 
+                "position": pos.tolist(),
+                "adjusted_position": (pos)*scale_factor,
+                "dots": dict()
+            }
+            
+            if landmark.id in list_landmarks_centroid :
                 centroid_x.append(pos[0])
                 centroid_y.append(pos[1])
                 centroid_z.append(pos[2])
         if len(centroid_x) > 0:
             center_x, center_y, center_z = sum(centroid_x)/len(centroid_x), sum(centroid_y)/len(centroid_y), sum(centroid_z)/len(centroid_z)
-            df.loc["centroid"] = ["#000000", center_x, center_y, center_z, center_x*scale_factor, center_y*scale_factor, center_z*scale_factor]
+            json_dict["centroid"] = ["#000000", center_x, center_y, center_z, center_x*scale_factor, center_y*scale_factor, center_z*scale_factor]
         
         export_file_name = QFileDialog.getSaveFileName(self, "Save File", self.directory+"/.csv","CSV (*.csv *.txt)")[0]
         if len(export_file_name.strip()) != 0:
             df.to_csv(export_file_name, index=True, index_label="Label", sep="\t")
     
-    def get_list_dots_for_centroid(self, points_with_pos):
+    def get_list_landmarks_for_centroid(self, points_with_pos):
         """Launch Dialog to have the list of points that will count to compute the centroid
 
         Args:
