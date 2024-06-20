@@ -82,7 +82,7 @@ class ProjPoint():
     def __str__(self) -> str:
         return f"{self.proj_mat} x {self.pixel_point}"
 
-class Point():
+class Pose():
     """Landmark posed on image
     """
 
@@ -91,7 +91,7 @@ class Point():
         self.y = float(y)  
     
     def scaled(self, factor):
-        return Point(round(self.x*factor), round(self.y*factor))
+        return Pose(round(self.x*factor), round(self.y*factor))
     
     def __str__(self) -> str:
         return (self.x, self.y).__str__()

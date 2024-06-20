@@ -37,15 +37,15 @@ from scripts import helpers, converters
 
 
 
-class Point3D():
+class Landmark():
     """Referenced Point with position of landmarks and its position
     """
 
-    def __init__(self, id, label, color=QColor('blue'), position = None, dots = None) -> None:
+    def __init__(self, id, label, color=QColor('blue'), position = None, poses = None) -> None:
         self.id = id
         self.label = label
         self.color = color
-        self.dots = dots if dots is not None else dict()
+        self.poses = poses if poses is not None else dict()
         self.position = position
 
     def get_label(self):
@@ -69,29 +69,29 @@ class Point3D():
     def set_color(self, color):
         self.color = color
     
-    def add_dot(self, image, dot):
-        self.dots[image] = dot
+    def add_pose(self, image, pose):
+        self.poses[image] = pose
 
-    def reset_point(self):
-        self.dots = dict()
+    def reset_landmark(self):
+        self.poses = dict()
         self.position = None
     
-    def get_image_dots(self, image):
-        return self.dots[image] if image in self.dots else None
+    def get_image_pose(self, image):
+        return self.poses[image] if image in self.poses else None
     
-    def get_dots(self):
-        return self.dots
+    def get_poses(self):
+        return self.poses
     
     def to_tuple(self, image, intrinsics, extrinsics, distCoeffs):
         rep_point = project_points(np.matrix(self.position), intrinsics, extrinsics, distCoeffs) if self.position is not None else None
         return {"id": self.id,
                 "label": self.label,
-                "dot": self.dots[image] if image in self.dots else None,
+                "pose": self.poses[image] if image in self.poses else None,
                 "color": self.color,
-                "position": helpers.Point(rep_point.item(0),rep_point.item(1)) if rep_point is not None else None }
+                "position": helpers.Pose(rep_point.item(0),rep_point.item(1)) if rep_point is not None else None }
 
     def __eq__(self, other):
-        if isinstance(other, Point3D):
+        if isinstance(other, Landmark):
             return self.id == other.id
         if isinstance(other, int):
             return self.id == other
@@ -99,9 +99,9 @@ class Point3D():
     
     def __str__(self) -> str:
         string = f"{self.label} : {self.position}\n"
-        for x in self.dots:
-            if self.dots[x] is not None:
-                string += f"{x} : {self.dots[x]}\n"
+        for x in self.poses:
+            if self.poses[x] is not None:
+                string += f"{x} : {self.poses[x]}\n"
         return string
 
 OPENCV_DISTORT_VALUES = 8

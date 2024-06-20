@@ -37,29 +37,29 @@ from PySide6.QtWidgets import (QWidget, QLabel, QSizePolicy, QScrollArea, QMessa
 
 from scripts import helpers
 
-INIT_POINT_WIDTH = 3
+INIT_MARKER_WIDTH = 3
 class QImageLabel(QLabel):
-    def __init__(self, parent : QWidget, image : QImage, base_factor : float, dots : list, point_scale : int):
+    def __init__(self, parent : QWidget, image : QImage, base_factor : float, landmarks : list, marker_scale : int):
         super(QImageLabel, self).__init__(parent)
-        self.dots = dots
-        self.visible = [True for i in self.dots]
-        self.point_scale = point_scale
+        self.landmarks = landmarks
+        self.visible = [True for i in self.landmarks]
+        self.marker_scale = marker_scale
         self.scaleFactor = base_factor
         self.image = QPixmap.fromImage(image)
         self.setPixmap(self.image.scaled(self.image.size()*self.scaleFactor, Qt.AspectRatioMode.KeepAspectRatio))
-        self.paint_dots()
+        self.paint_markers()
 
-    def set_scale_point(self, val):
-        self.point_scale = val
+    def set_marker_scale(self, val):
+        self.marker_scale = val
     
-    def set_visible_point(self, index, is_visible):
+    def set_visible_landmark(self, index, is_visible):
         self.visible[index] = is_visible
 
-    def set_visible_points(self, is_visible):
+    def set_visible_landmarks(self, is_visible):
         for index in range(len(self.visible)):
             self.visible[index] = is_visible
 
-    def points_hidden(self):
+    def are_all_landmarks_hidden(self):
         for index in range(len(self.visible)):
             if self.visible[index]:
                 return False  
@@ -69,27 +69,29 @@ class QImageLabel(QLabel):
         if ev.buttons() & Qt.MouseButton.RightButton:
             return
         pos = ev.pos()
-        point = helpers.Point(float(pos.x()), float(pos.y()))
-        self.dots[self.window().point]["dot"] = point.scaled(1/self.scaleFactor)
-        self.paint_dots()
+        pose = helpers.Pose(float(pos.x()), float(pos.y()))
+        self.landmarks[self.window().landmark]["pose"] = pose.scaled(1/self.scaleFactor)
+        self.paint_markers()
 
-    def paint_dots(self):
+    def paint_markers(self):
         canvas = self.image.scaled(self.image.size()*self.scaleFactor, Qt.AspectRatioMode.KeepAspectRatio)
         painter = QPainter(canvas)
         pen = QPen()
-        pen.setWidth(self.point_scale)
-        for index in range(len(self.dots)):
-            dot = self.dots[index]
-            pen.setColor(dot['color'])
-            painter.setPen(pen)
-            if(dot["dot"] is None):
-                if not self.visible[index]:
-                    continue
-                if dot["position"] is not None:
-                    point = dot["position"].scaled(self.scaleFactor)
-                    painter.drawArc(QRectF(point.x, point.y,float(self.point_scale)/3,float(self.point_scale)/3), 0, 16*360)
+        pen.setWidth(self.marker_scale)
+        for index in range(len(self.landmarks)):
+            if not self.visible[index]:
+                # Hide landmark placed or not
                 continue
-            point = dot["dot"].scaled(self.scaleFactor)
+            landmark = self.landmarks[index]
+            pen.setColor(landmark['color'])
+            painter.setPen(pen)
+            if(landmark["pose"] is None):
+                if landmark["position"] is not None:
+                    point = landmark["position"].scaled(self.scaleFactor)
+                    painter.drawArc(QRectF(point.x, point.y,float(self.marker_scale)/3,float(self.marker_scale)/3), 0, 16*360)
+                continue
+            # Landmark has been placed on the image
+            point = landmark["pose"].scaled(self.scaleFactor)
             painter.drawPoint(int(point.x), int(point.y))
 
         painter.end()
@@ -101,14 +103,14 @@ class QImageLabel(QLabel):
         self.adjustSize()
         scale = self.size().width()/self.image.size().width()
         self.scaleFactor = scale
-        self.paint_dots()
+        self.paint_markers()
 
     def fullImage(self):
         old_scale = self.scaleFactor
         self.setPixmap(self.image)
         self.adjustSize()
         self.scaleFactor = 1.0
-        self.paint_dots()
+        self.paint_markers()
 
         return self.scaleFactor/old_scale
 
@@ -120,13 +122,13 @@ class QImageLabel(QLabel):
         self.setPixmap(scaled_image)
         self.adjustSize()
 
-        self.paint_dots()
+        self.paint_markers()
 
         return new_scale/old_scale
     
-class QPointButton(QPushButton):
+class QLandmarkButton(QPushButton):
     def __init__(self, label, action : helpers.Action):
-        super(QPointButton, self).__init__(label)
+        super(QLandmarkButton, self).__init__(label)
         self.action = action
 
 
@@ -137,13 +139,13 @@ class QColorPixmap(QLabel):
         pixmap.fill(color)
         self.setPixmap(pixmap)
 
-class QPointButtons(QWidget):
+class QLandmarkButtonList(QWidget):
     button_clicked = Signal(object)
     def __init__(self, label, color, index):
-        super(QPointButtons, self).__init__()
+        super(QLandmarkButtonList, self).__init__()
         layout = QHBoxLayout()
 
-        self.select_button = QPointButton(label, helpers.Action.SELECT)
+        self.select_button = QLandmarkButton(label, helpers.Action.SELECT)
         self.select_button.setFixedHeight(helpers.HEIGHT_COMPONENT)
         self.select_button.setCheckable(True)
         self.select_button.clicked.connect(self.btnListener)
@@ -152,12 +154,12 @@ class QPointButtons(QWidget):
         self.color = QColorPixmap(self.select_button.height(), color)
         layout.addWidget(self.color)
 
-        self.hide_button = QPointButton("hide", helpers.Action.HIDE)
+        self.hide_button = QLandmarkButton("hide", helpers.Action.HIDE)
         self.hide_button.clicked.connect(self.btnListener)
         self.hide_button.setFixedWidth(50)
         layout.addWidget(self.hide_button)
 
-        self.delete_button = QPointButton("x", helpers.Action.DELETE)
+        self.delete_button = QLandmarkButton("x", helpers.Action.DELETE)
         self.delete_button.clicked.connect(self.btnListener)
         self.delete_button.setFixedWidth(20)
         layout.addWidget(self.delete_button)
@@ -178,23 +180,23 @@ class QPointButtons(QWidget):
         self.button_clicked.emit(action)
 
 
-class QPoints(QScrollArea):
+class QLandmarks(QScrollArea):
     delete = Signal(object)
     showed = Signal(object)
     hidden = Signal(object)
 
     def __init__(self, points):
-        super(QPoints, self).__init__()
+        super(QLandmarks, self).__init__()
         self.w = QWidget()
         self.vbox = QVBoxLayout()  
         self.vbox.setAlignment(Qt.AlignmentFlag.AlignTop)
-        self.buttons = []
+        self.buttons : list[QLandmarkButtonList] = []
         index = 0
         for point in points:
-            button = QPointButtons(point["label"], point["color"], index)
-            self.buttons.append(button)
-            button.button_clicked.connect(self.btnListener)
-            self.vbox.addWidget(button)
+            landmark = QLandmarkButtonList(point["label"], point["color"], index)
+            self.buttons.append(landmark)
+            landmark.button_clicked.connect(self.btnListener)
+            self.vbox.addWidget(landmark)
             index += 1
         self.check(0)
         self.w.setLayout(self.vbox)
@@ -213,10 +215,10 @@ class QPoints(QScrollArea):
             button.setChecked(False)
         self.buttons[index].setChecked(True)
     
-    def delete_point(self, index):
+    def delete_landmark(self, index):
         self.delete.emit(index)
     
-    def show_point(self, show, index):
+    def show_landmark(self, show, index):
         if show:
             self.showed.emit(index)
         else:
@@ -226,46 +228,46 @@ class QPoints(QScrollArea):
         sender_button = self.sender()
         if action == helpers.Action.SELECT:
             self.check(sender_button.index)
-            self.window().point = sender_button.index
+            self.window().landmark = sender_button.index
             return
         
         if action == helpers.Action.DELETE:
             print(f"Delete : {sender_button.index}")
-            self.delete_point(sender_button.index)
+            self.delete_landmark(sender_button.index)
             return
 
         # action == helpers.Action.HIDE
-        self.show_point(sender_button.visible, sender_button.index)
+        self.show_landmark(sender_button.visible, sender_button.index)
         
         
 
-class QScalePoint(QWidget):
+class QScaleMarker(QWidget):
     valChanged = Signal(object)
     def __init__(self, parent):
-        super(QScalePoint, self).__init__(parent)
+        super(QScaleMarker, self).__init__(parent)
 
         self.init_settings()
         self.parent = parent
         full_layout = QHBoxLayout()
 
         self.label = QLabel("Point Scale: ", self)
-        self.size = QSpinBox(self)
-        self.size.setMinimum(1)
-        self.size.setMaximum(30)
-        self.size.setSuffix("px")
-        self.size.setValue(INIT_POINT_WIDTH if not self.settings.contains("point_scale") else int(self.settings.value("point_scale")))
-        self.size.valueChanged.connect(self.signal_value)
+        self.sizeMarkerWidget = QSpinBox(self)
+        self.sizeMarkerWidget.setMinimum(1)
+        self.sizeMarkerWidget.setMaximum(30)
+        self.sizeMarkerWidget.setSuffix("px")
+        self.sizeMarkerWidget.setValue(INIT_MARKER_WIDTH if not self.settings.contains("marker_scale") else int(self.settings.value("marker_scale")))
+        self.sizeMarkerWidget.valueChanged.connect(self.signal_value)
         full_layout.addWidget(self.label)
-        full_layout.addWidget(self.size)
+        full_layout.addWidget(self.sizeMarkerWidget)
         self.setLayout(full_layout)
         self.setMaximumWidth(200)
 
     def signal_value(self, val):
-        self.settings.setValue("point_scale", val)
+        self.settings.setValue("marker_scale", val)
         self.valChanged.emit(val)
 
     def get_value(self):
-        return self.size.value()
+        return self.sizeMarkerWidget.value()
 
     def init_settings(self):
         self.settings = QSettings("Sphaeroptica", "reconstruction") 
@@ -307,14 +309,14 @@ class QHideAll(QWidget):
   
 class QImageViewer(QMainWindow):
     closeSignal = Signal(object)
-    def __init__(self, path_name : str, dots : list, init_geometry : QRect = None):
+    def __init__(self, path_name : str, landmarks : list, init_geometry : QRect = None):
         super(QImageViewer, self).__init__()
 
         self.setGeometry(init_geometry)
 
         self.init_settings()
         self.image = None
-        self.point = 0
+        self.landmark = 0
         full_layout = QHBoxLayout()
 
         # Open Image
@@ -329,7 +331,7 @@ class QImageViewer(QMainWindow):
             self.close()
             return
     
-        self.image_label = QImageLabel(self, image, 0.10, dots, INIT_POINT_WIDTH if self.settings.value("point_scale") is None else int(self.settings.value("point_scale")))
+        self.image_label = QImageLabel(self, image, 0.10, landmarks, INIT_MARKER_WIDTH if self.settings.value("marker_scale") is None else int(self.settings.value("marker_scale")))
         
         self.image_label.setBackgroundRole(QPalette.ColorRole.Dark)
         self.image_label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Ignored)
@@ -363,13 +365,13 @@ class QImageViewer(QMainWindow):
 
         self.side_bar = QVBoxLayout()
 
-        self.scale_point = QScalePoint(self)
+        self.scale_point = QScaleMarker(self)
         self.scale_point.valChanged.connect(self.changeScalePoint)
 
         self.hide_all_button = QHideAll(self)
         self.hide_all_button.visibleChanged.connect(self.changeVisibility)
 
-        self.points = QPoints(dots)
+        self.points = QLandmarks(landmarks)
         self.points.delete.connect(self.delete_point)
         self.points.showed.connect(self.show_point)
         self.points.hidden.connect(self.hide_point)
@@ -389,38 +391,38 @@ class QImageViewer(QMainWindow):
 
     
     def changeScalePoint(self, val):
-        self.image_label.set_scale_point(val)
-        self.image_label.paint_dots()
+        self.image_label.set_marker_scale(val)
+        self.image_label.paint_markers()
     
     def changeVisibility(self, bool):
-        self.image_label.set_visible_points(bool)
+        self.image_label.set_visible_landmarks(bool)
         for i in range(len(self.points.buttons)):
             self.points.buttons[i].hide_button.setText("hide" if bool else "show")
             self.points.buttons[i].visible = bool
-        self.image_label.paint_dots()        
+        self.image_label.paint_markers()        
 
     def show_point(self, index):
-        self.image_label.set_visible_point(index, True)
+        self.image_label.set_visible_landmark(index, True)
         self.hide_all_button.set_visibility(True)
-        self.image_label.paint_dots()
+        self.image_label.paint_markers()
 
     def hide_point(self, index):
-        self.image_label.set_visible_point(index, False)
-        if self.image_label.points_hidden():
+        self.image_label.set_visible_landmark(index, False)
+        if self.image_label.are_all_landmarks_hidden():
             self.hide_all_button.set_visibility(False)
-        self.image_label.paint_dots()
+        self.image_label.paint_markers()
 
     def delete_point(self, index):
-        self.image_label.dots[index]["dot"] = None
-        self.image_label.paint_dots()
+        self.image_label.landmarks[index]["pose"] = None
+        self.image_label.paint_markers()
     
     def update(self):
-        self.image_label.paint_dots()
+        self.image_label.paint_markers()
 
     def switchPoint(self, i : int):
-        if self.point+i < len(self.image_label.dots) and self.point+i >= 0:
-            self.point += i
-        self.points.check(self.point)
+        if self.landmark+i < len(self.image_label.landmarks) and self.landmark+i >= 0:
+            self.landmark += i
+        self.points.check(self.landmark)
 
     def normalSize(self):
         self.image_label.normalSize()
@@ -503,7 +505,7 @@ class QImageViewer(QMainWindow):
 
 
     def closeEvent(self, a0: QCloseEvent) -> None:
-        self.closeSignal.emit(self.image_label.dots)
+        self.closeSignal.emit(self.image_label.landmarks)
 
     def keyPressEvent(self, ev: QKeyEvent) -> None:
         try:

@@ -150,7 +150,7 @@ class PictureButton(QLabel):
             return
 
 class QColorPixmap(QLabel):
-    """Widget that show the referenced color for a point
+    """Widget that show the referenced color for a landmark
     """
 
     color_changed = Signal(object)
@@ -164,7 +164,7 @@ class QColorPixmap(QLabel):
         self.color_dialog = QColorDialog()
     
     def mousePressEvent(self, ev: QMouseEvent) -> None:
-        """Show a ColorDialog to select a new color for the point
+        """Show a ColorDialog to select a new color for the landmark
 
         Args:
             ev (QMouseEvent): Mouse Event
@@ -174,17 +174,17 @@ class QColorPixmap(QLabel):
             self.color_changed.emit(color)
 
 
-class QPointEntry(QWidget):
-    """Entry in the list of points
+class QLandmarkEntry(QWidget):
+    """Entry in the list of landmarks
     """
 
-    delete_point = Signal()
-    reset_point = Signal()
+    delete_landmark = Signal()
+    reset_landmark = Signal()
     label_changed = Signal(object)
     color_changed = Signal(object)
 
-    def __init__(self, point : reconstruction.Point3D):
-        super(QPointEntry, self).__init__()
+    def __init__(self, landmark : reconstruction.Landmark):
+        super(QLandmarkEntry, self).__init__()
         layout = QHBoxLayout()
 
         self.drag_button = QLabel()
@@ -194,14 +194,14 @@ class QPointEntry(QWidget):
         self.drag_button.setBackgroundRole(QPalette.ColorRole.Highlight)
         layout.addWidget(self.drag_button)
 
-        self.point = point
+        self.landmark = landmark
         self.label = QLineEdit(self)
         self.label.setFixedHeight(helpers.HEIGHT_COMPONENT)
-        self.label.setText(point.label)
+        self.label.setText(landmark.label)
         self.label.editingFinished.connect(self.change_label)
         layout.addWidget(self.label)
 
-        self.color_label = QColorPixmap(self.label.height(), point.get_color())
+        self.color_label = QColorPixmap(self.label.height(), landmark.get_color())
         layout.addWidget(self.color_label)
         self.color_label.color_changed.connect(self.change_color)
 
@@ -217,26 +217,26 @@ class QPointEntry(QWidget):
         self.delete_button.setFixedWidth(20)
         layout.addWidget(self.delete_button)
         
-        self.id = point.id
+        self.id = landmark.id
         self.setLayout(layout)
     
     def delete(self):
         """Delete Entry
-        TODO : Use a ModelView architecture for points
+        TODO : Use a ModelView architecture for landmarks
         """
 
-        self.delete_point.emit()
+        self.delete_landmark.emit()
     
     def reset(self):
         """Remove all landmarks and 3D position 
-        TODO : Use a ModelView architecture for points
+        TODO : Use a ModelView architecture for landmarks
         """
 
-        self.reset_point.emit()
+        self.reset_landmark.emit()
     
     def change_color(self, color):
-        """Change color of point
-        TODO : Use a ModelView architecture for points
+        """Change color of landmark
+        TODO : Use a ModelView architecture for landmarks
 
         Args:
             color (QColor): new color
@@ -245,15 +245,15 @@ class QPointEntry(QWidget):
         self.color_changed.emit(color)
 
     def change_label(self):
-        """edit the label of the point
-        TODO : Use a ModelView architecture for points
+        """edit the label of the landmark
+        TODO : Use a ModelView architecture for landmarks
         """
 
         self.label.clearFocus()
         self.label_changed.emit(self.label.text())
 
     def mouseMoveEvent(self, e):
-        """Drag of Qpoints
+        """Drag of QLandmarks
 
         Args:
             e (QMouseEvent): event
@@ -269,24 +269,24 @@ class QPointEntry(QWidget):
             drag.setPixmap(pixmap)
             drag.exec(Qt.DropAction.MoveAction)
 
-class QPoints(QScrollArea):
-    """ScrollArea containing the list of QPointsEntry
+class QLandmarks(QScrollArea):
+    """ScrollArea containing the list of QLandmarksEntry
     """
-    dot_added = Signal()
-    delete_dot = Signal(object)
-    reset_dot = Signal(object)
+    landmark_added = Signal()
+    landmark_deleted = Signal(object)
+    landmark_reset = Signal(object)
     label_changed = Signal(object)
     color_changed = Signal(object)
 
     def __init__(self, parent):
-        super(QPoints, self).__init__(parent)
+        super(QLandmarks, self).__init__(parent)
         self.w = QWidget()
         self.add_pt_btn = QPushButton("Add landmark")
         self.add_pt_btn.setSizePolicy(QSizePolicy.Policy.Expanding,
             QSizePolicy.Policy.Maximum)
-        self.add_pt_btn.clicked.connect(self.add_dot)
+        self.add_pt_btn.clicked.connect(self.add_landmark)
 
-        self.load_points(self.window().dots)
+        self.load_landmarks(self.window().landmarks)
         self.setBackgroundRole(QPalette.ColorRole.BrightText)
         self.setSizePolicy(QSizePolicy.Policy.Expanding,
             QSizePolicy.Policy.Expanding)
@@ -301,28 +301,28 @@ class QPoints(QScrollArea):
 
         return super().eventFilter(source, event)
 
-    def load_points(self, points):
-        """Load each point to the list
+    def load_landmarks(self, landmarks):
+        """Load each landmarks to the list
 
         Args:
-            points (list): list of points
+            landmarks (list): list of landmarks
         """
 
         self.w = QWidget()
         self.vbox = QVBoxLayout()
 
-        self.pointbox = QVBoxLayout()
+        self.landmarks_box = QVBoxLayout()
         self.buttons = []
-        for point in points:
-            button = QPointEntry(point)
+        for landmark in landmarks:
+            button = QLandmarkEntry(landmark)
             self.buttons.append(button)
-            button.delete_point.connect(self.delete_point)
-            button.reset_point.connect(self.reset_point)
+            button.delete_landmark.connect(self.delete_landmark)
+            button.reset_landmark.connect(self.reset_landmark)
             button.label_changed.connect(self.change_label)
             button.color_changed.connect(self.change_color)
-            self.pointbox.addWidget(button)
+            self.landmarks_box.addWidget(button)
         
-        self.vbox.addLayout(self.pointbox)
+        self.vbox.addLayout(self.landmarks_box)
         self.vbox.addWidget(self.add_pt_btn)
         self.w.setLayout(self.vbox)
         self.w.setSizePolicy(QSizePolicy.Policy.Expanding,
@@ -330,34 +330,34 @@ class QPoints(QScrollArea):
         self.setWidget(self.w)
         self.setAcceptDrops(True)
     
-    def delete_point(self):
-        """Sends a signal to delete point
-        TODO : Use a ModelView architecture for points
+    def delete_landmark(self):
+        """Sends a signal to delete landmark
+        TODO : Use a ModelView architecture for landmarks
         """
 
         sender_button = self.sender()
         id = sender_button.id
-        self.delete_dot.emit(id)
+        self.landmark_deleted.emit(id)
     
-    def reset_point(self):
-        """Sends a signal to reset point
-        TODO : Use a ModelView architecture for points
+    def reset_landmark(self):
+        """Sends a signal to reset landmark
+        TODO : Use a ModelView architecture for landmarks
         """
         
         sender_button = self.sender()
         id = sender_button.id
-        self.reset_dot.emit(id)
+        self.landmark_reset.emit(id)
 
-    def add_dot(self):
-        """Sends a signal to add a new point
-        TODO : Use a ModelView architecture for points
+    def add_landmark(self):
+        """Sends a signal to add a new landmark
+        TODO : Use a ModelView architecture for landmarks
         """
 
-        self.dot_added.emit()
+        self.landmark_added.emit()
 
     def change_label(self, text):
-        """Sends a signal to change the label of the point
-        TODO : Use a ModelView architecture for points
+        """Sends a signal to change the label of the landmark
+        TODO : Use a ModelView architecture for landmarks
         """
 
         sender_button = self.sender()
@@ -365,8 +365,8 @@ class QPoints(QScrollArea):
         self.label_changed.emit([id, text])
     
     def change_color(self, color):
-        """Sends a signal to change the color of the point
-        TODO : Use a ModelView architecture for points
+        """Sends a signal to change the color of the landmark
+        TODO : Use a ModelView architecture for landmarks
         """
 
         sender_button = self.sender()
@@ -385,8 +385,8 @@ class QPoints(QScrollArea):
 
 
     def dropEvent(self, a0: QDropEvent) -> None:
-        """Authorize drop event and change list of points
-        Add the dragged point over the first point it isn't under
+        """Authorize drop event and change list of landmarks
+        Add the dragged landmark over the first landmark it isn't under
 
         Args:
             a0 (QDragEnterEvent): Drag Event
@@ -397,26 +397,26 @@ class QPoints(QScrollArea):
 
         desc = pos.y() > self.original_pos.y()
 
-        last = self.pointbox.itemAt(self.pointbox.count()-1).widget()
+        last = self.landmarks_box.itemAt(self.landmarks_box.count()-1).widget()
         if pos.y() > last.y() + last.size().height() // 2:
             # The drag went under the last widget of the list
-            self.window().rec.viewer.move_dot(self.pointbox.count()-1, widget.id)
+            self.window().rec.viewer.move_landmark(self.landmarks_box.count()-1, widget.id)
         else:
-            for n in range(self.pointbox.count()):
+            for n in range(self.landmarks_box.count()):
                 # Get the widget at each index in turn.
-                w = self.pointbox.itemAt(n).widget()
+                w = self.landmarks_box.itemAt(n).widget()
                 print(f"{w.label.text()} : {pos.y()} < {w.y() + w.size().height() // 2}")
                 if pos.y() < w.y() + w.size().height() // 2:
                     # We didn't drag past this widget.
                     # insert to the left of it.
-                    self.window().rec.viewer.move_dot(n-1 if desc else n, widget.id)
+                    self.window().rec.viewer.move_landmark(n-1 if desc else n, widget.id)
                     break
-        self.window().rec.viewer.update_points()
+        self.window().rec.viewer.update_landmarks()
         a0.accept()
 
 
 class DistanceWidget(QWidget):
-    """Widget that show the distance between two chosen points
+    """Widget that show the distance between two chosen landmarks
     """
 
     def __init__(self, parent):
@@ -437,7 +437,7 @@ class DistanceWidget(QWidget):
         self.reset_layout.addWidget(self.reset_button)
         self.full_layout.addLayout(self.reset_layout)
         
-        self.load_points(self.window().dots)
+        self.load_landmarks(self.window().landmarks)
         self.selection.addWidget(self.left)
         self.to = QLabel("to")
         self.to.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -511,15 +511,15 @@ class DistanceWidget(QWidget):
         print("Scale factor reset")
         self.update_dist()
 
-    def load_points(self, points):
-        """Load each point that has a 3D position to the widget
+    def load_landmarks(self, landmarks : list[reconstruction.Landmark]):
+        """Load each landmark that has a 3D position to the widget
 
         Args:
-            points (list): list of points
+            landmarks (list): list of landmarks
         """
 
-        self.points = list()
-        self.points.append(None)
+        self.landmarks = list[reconstruction.Landmark]()
+        self.landmarks.append(None)
         left_index = self.left.currentIndex()
         left_data = self.left.currentData()
         right_index = self.right.currentIndex()
@@ -530,12 +530,12 @@ class DistanceWidget(QWidget):
 
         self.left.addItem("",0)
         self.right.addItem("",0)
-        for point in points:
-            if point.get_position() is None:
+        for landmark in landmarks:
+            if landmark.get_position() is None:
                 continue
-            self.points.append(point)
-            self.left.addItem(point.get_label(),point.get_id())
-            self.right.addItem(point.get_label(),point.get_id())
+            self.landmarks.append(landmark)
+            self.left.addItem(landmark.get_label(),landmark.get_id())
+            self.right.addItem(landmark.get_label(),landmark.get_id())
         
         if left_index is not None and self.left.itemData(left_index) == left_data:
             self.left.setCurrentIndex(left_index)
@@ -548,24 +548,24 @@ class DistanceWidget(QWidget):
             self.right.setCurrentIndex(0)
 
     def update_dist(self):
-        """Computes the distance between two points and updates the widget
+        """Computes the distance between two landmarks and updates the widget
         """
 
         if self.left.currentIndex() <= 0 or self.right.currentIndex() <= 0:
             self.value.setText("0.0")
             self.original_value = 0.0
             return
-        self.original_value = reconstruction.get_distance(self.points[self.left.currentIndex()].get_position(), self.points[self.right.currentIndex()].get_position())
+        self.original_value = reconstruction.get_distance(self.landmarks[self.left.currentIndex()].get_position(), self.landmarks[self.right.currentIndex()].get_position())
         self.value.setText(str(self.original_value * self.scale_factor / helpers.Scale[str(self.scale_widget.currentText())].value))
         self.value.setCursorPosition(0)
 
 class CommandsWidget(QWidget):
-    """Right side of the window, Widget containing everything, shortcuts, points and distance
+    """Right side of the window, Widget containing everything, shortcuts, landmarks and distance
     """
 
-    dot_added = Signal()
-    delete_dot = Signal(object)
-    reset_dot = Signal(object)
+    landmark_added = Signal()
+    landmark_deleted = Signal(object)
+    landmark_reset = Signal(object)
     label_changed = Signal(object)
     color_changed = Signal(object)
     export = Signal()
@@ -613,16 +613,16 @@ class CommandsWidget(QWidget):
 
         self.v_layout.addLayout(self.grid_layout)
 
-        # List of Points
-        self.points = QPoints(self)
-        self.points.setAlignment(Qt.AlignmentFlag.AlignTop)
-        self.v_layout.addWidget(self.points)
+        # List of Landmarkss
+        self.landmarks = QLandmarks(self)
+        self.landmarks.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self.v_layout.addWidget(self.landmarks)
 
-        self.points.delete_dot.connect(self.delete_point)
-        self.points.reset_dot.connect(self.reset_point)
-        self.points.label_changed.connect(self.change_label)
-        self.points.color_changed.connect(self.change_color)
-        self.points.dot_added.connect(self.add_dot)
+        self.landmarks.landmark_deleted.connect(self.delete_landmark)
+        self.landmarks.landmark_reset.connect(self.reset_landmark)
+        self.landmarks.label_changed.connect(self.change_label)
+        self.landmarks.color_changed.connect(self.change_color)
+        self.landmarks.landmark_added.connect(self.add_landmark)
 
         # Distance calculator
 
@@ -643,14 +643,14 @@ class CommandsWidget(QWidget):
     def right_clicked(self, key : helpers.Keys):
         self.parent().set_picture(key)
 
-    def delete_point(self, id):
-        self.delete_dot.emit(id)
+    def delete_landmark(self, id):
+        self.landmark_deleted.emit(id)
 
-    def reset_point(self, id):
-        self.reset_dot.emit(id)
+    def reset_landmark(self, id):
+        self.landmark_reset.emit(id)
     
-    def add_dot(self):
-        self.dot_added.emit()
+    def add_landmark(self):
+        self.landmark_added.emit()
 
     def change_label(self, id_and_text):
         self.label_changed.emit(id_and_text)
@@ -672,7 +672,7 @@ class Sphere3D(QWidget):
         self._angles_sphere = (0,0) #(180,90)
         self._old_angles = (0,0)
 
-        self.init_dots()
+        self.init_landmarks()
 
         self.setContentsMargins(5,5,5,5)
 
@@ -709,13 +709,12 @@ class Sphere3D(QWidget):
         self.v_layout.addWidget(self.sphere)
         self.v_layout.addWidget(self._sphere_values)
 
-        
         self.commands_widget = CommandsWidget(self)
-        self.commands_widget.delete_dot.connect(self.delete_dot)
-        self.commands_widget.reset_dot.connect(self.reset_dot)
+        self.commands_widget.landmark_deleted.connect(self.delete_landmark)
+        self.commands_widget.landmark_reset.connect(self.reset_landmark)
         self.commands_widget.label_changed.connect(self.change_label)
         self.commands_widget.color_changed.connect(self.change_color)
-        self.commands_widget.dot_added.connect(self.add_dot)
+        self.commands_widget.landmark_added.connect(self.add_landmark)
         self.commands_widget.export.connect(self.export)
 
         self.commands_widget.setSizePolicy(QSizePolicy.Policy.Maximum,QSizePolicy.Policy.MinimumExpanding)
@@ -736,9 +735,9 @@ class Sphere3D(QWidget):
         """Creates the first landmark when we open the app
         """
          
-        # Point3D.id -> Point3D
-        self.landmarks = list()
-        self.landmarks.append(reconstruction.Point3D(0, 'Point_0', QColor('blue')))
+        # Landmark.id -> Landmark
+        self.landmarks = list[reconstruction.Landmark]()
+        self.landmarks.append(reconstruction.Landmark(0, 'Point_0', QColor('blue')))
         QColor('blue').value()
     
     def load(self, calibration : QFileInfo):
@@ -832,81 +831,81 @@ class Sphere3D(QWidget):
 
         print(f"Current image loaded : {self.current_image} wih pos {self._angles_sphere}")
 
-        self.init_dots()
+        self.init_landmarks()
 
-    def delete_dot(self, id):
-        """Deletes dot
-        TODO : Use a ModelView architecture for points
+    def delete_landmark(self, id):
+        """Deletes landmark
+        TODO : Use a ModelView architecture for landmarks
         Args:
-            id (int): Id of the dot to delete
+            id (int): Id of the landmark to delete
         """
 
-        self.dots.remove(id)
-        self.update_points()
+        self.landmarks.remove(id)
+        self.update_landmarks()
     
-    def reset_dot(self, id):
-        """Resets dot
-        TODO : Use a ModelView architecture for points
+    def reset_landmark(self, id):
+        """Resets landmark
+        TODO : Use a ModelView architecture for landmarks
         Args:
-            id (int): Id of the dot to delete
+            id (int): Id of the landmark to delete
         """
 
-        index = self.dots.index(id)
-        self.dots[index].reset_point()
-        self.update_points()
+        index = self.landmarks.index(id)
+        self.landmarks[index].reset_landmark()
+        self.update_landmarks()
     
     def change_label(self, id_and_text):
-        """Change the label of the point
-        TODO : Use a ModelView architecture for points
+        """Change the label of the landmark
+        TODO : Use a ModelView architecture for landmarks
         Args:
             id_and_text (tuple(int, string)): id, new label
         """
 
         id, text = id_and_text[0], id_and_text[1]
-        index = self.dots.index(id)
-        self.dots[index].set_label(text)
+        index = self.landmarks.index(id)
+        self.landmarks[index].set_label(text)
     
     def change_color(self, id_and_color):
-        """Change the coloe of the point
-        TODO : Use a ModelView architecture for points
+        """Change the coloe of the landmark
+        TODO : Use a ModelView architecture for landmarks
         Args:
             id_and_text (tuple(int, Qcolor)): id, new coloe
         """
 
         id, color = id_and_color[0], id_and_color[1]
-        index = self.dots.index(id)
-        self.dots[index].set_color(color)
-        self.update_points()
+        index = self.landmarks.index(id)
+        self.landmarks[index].set_color(color)
+        self.update_landmarks()
     
-    def add_dot(self):
-        """Add new point to the list
-        TODO : Use a ModelView architecture for points
+    def add_landmark(self):
+        """Add new landmark to the list
+        TODO : Use a ModelView architecture for landmarks
         """
 
-        max_id = max({i.id for i in self.dots}, default=(-1))+1
-        self.dots.append(reconstruction.Point3D(max_id, f'Point_{max_id}'))
-        self.update_points()
+        max_id = max({i.id for i in self.landmarks}, default=(-1))+1
+        self.landmarks.append(reconstruction.Landmark(max_id, f'Point_{max_id}'))
+        self.update_landmarks()
     
-    def move_dot(self, index, id):
-        """move dot to new index 
+    def move_landmark(self, index, id):
+        """move landmark to new index 
 
         Args:
             index (int): new index
-            id (int): id of point
+            id (int): id of landmark
         """
 
-        old_index = self.dots.index(id)
+        old_index = self.landmarks.index(id)
         
-        dot = self.dots.pop(old_index)
-        self.dots.insert(index, dot)
+        landmark = self.landmarks.pop(old_index)
+        self.landmarks.insert(index, landmark)
         
 
-    def update_points(self):
-        """Update QPointsWidget and DistanceWidget
+    def update_landmarks(self):
+        """Update QLandmarksWidget and DistanceWidget
         """
 
-        self.commands_widget.points.load_points(self.dots)
-        self.commands_widget.distance_calculator.load_points(self.dots)
+        self.commands_widget.landmarks.load_landmarks(self.landmarks)
+        self.commands_widget.distance_calculator.load_landmarks(self.landmarks)
     
     def get_nearest_image(self, pos):
         """gets the 
@@ -1140,7 +1139,7 @@ class Sphere3D(QWidget):
         self._old_angles = (self._angles_sphere[0], self._angles_sphere[1])
 
     def export(self):
-        """Export points into a json file
+        """Export landmarks into a json file
         """
 
         json_dict = dict()
@@ -1155,7 +1154,7 @@ class Sphere3D(QWidget):
             print("Export cancelled")
             return
 
-        # QDialog to get list of points use to compute the centroid
+        # QDialog to get list of landmarks use to compute the centroid
         list_landmarks_centroid = self.get_list_landmarks_for_centroid(landmarks_with_pos)
 
         if list_landmarks_centroid is None:
@@ -1166,36 +1165,46 @@ class Sphere3D(QWidget):
             
             json_dict[landmark.get_label()] = { 
                 "color": landmark.get_color().name(), 
-                "position": pos.tolist(),
-                "adjusted_position": (pos)*scale_factor,
-                "dots": dict()
+                "position": [x for x in pos],
+                "adjusted_position": [x*scale_factor for x in pos],
+                "poses": dict()
             }
             
             if landmark.id in list_landmarks_centroid :
                 centroid_x.append(pos[0])
                 centroid_y.append(pos[1])
                 centroid_z.append(pos[2])
+            
+            for image, pose in landmark.get_poses().items():
+                if pose is not None:
+                    json_dict[landmark.get_label()]["poses"][image] = pose.to_array()
         if len(centroid_x) > 0:
             center_x, center_y, center_z = sum(centroid_x)/len(centroid_x), sum(centroid_y)/len(centroid_y), sum(centroid_z)/len(centroid_z)
-            json_dict["centroid"] = ["#000000", center_x, center_y, center_z, center_x*scale_factor, center_y*scale_factor, center_z*scale_factor]
+            json_dict["centroid"] = { 
+                "color": landmark.get_color().name(), 
+                "position": [center_x, center_y, center_z],
+                "adjusted_position": [center_x*scale_factor, center_y*scale_factor, center_z*scale_factor],
+                "poses": dict()
+            }
         
-        export_file_name = QFileDialog.getSaveFileName(self, "Save File", self.directory+"/.csv","CSV (*.csv *.txt)")[0]
+        export_file_name = QFileDialog.getSaveFileName(self, "Save File", self.directory+"/.json","JSON (*.json)")[0]
         if len(export_file_name.strip()) != 0:
-            df.to_csv(export_file_name, index=True, index_label="Label", sep="\t")
+            with open(export_file_name, "+w") as f:
+                json.dump(json_dict, f, indent=1)
     
-    def get_list_landmarks_for_centroid(self, points_with_pos):
-        """Launch Dialog to have the list of points that will count to compute the centroid
+    def get_list_landmarks_for_centroid(self, landmarks_with_pos):
+        """Launch Dialog to have the list of landmarks that will count to compute the centroid
 
         Args:
-            points_with_pos (list): list of points that have a position
+            landmarks_with_pos (list): list of landmarks that have a position
 
         Returns:
-            set: set of ids of points that will be used to compute the centroid
+            set: set of ids of landmarks that will be used to compute the centroid
         """
 
-        msg = CentroidMessage(points_with_pos)
+        msg = CentroidMessage(landmarks_with_pos)
         msg.setWindowModality(Qt.WindowModality.ApplicationModal)
-        set_points_chosen = set()
+        set_landmarks_chosen = set()
             
         retval = msg.exec()
         print("value of pressed message box button:", retval)
@@ -1206,8 +1215,8 @@ class Sphere3D(QWidget):
         for i in range(len(msg.checkboxes)):
             checkbox = msg.checkboxes[i]
             if checkbox.isChecked():
-                set_points_chosen.add(msg.dots[i].id)
-        return set_points_chosen
+                set_landmarks_chosen.add(msg.landmarks[i].id)
+        return set_landmarks_chosen
 
     def values_clicked(self) -> None:
         """Shows picture and allows to put landmarks on it
@@ -1218,18 +1227,18 @@ class Sphere3D(QWidget):
         extrinsics = np.matrix(self.calibration_dict["extrinsics"][self.current_image]["matrix"])
         extrinsics = extrinsics[0:3, 0:4]
 
-        dots = [dot.to_tuple(self.current_image, intrinsics, extrinsics, distCoeffs) for dot in self.dots]
-        self.win = show_picture.QImageViewer(f'{self.directory}/{self.current_image}', dots, self.window().geometry())
+        landmarks = [landmark.to_tuple(self.current_image, intrinsics, extrinsics, distCoeffs) for landmark in self.landmarks]
+        self.win = show_picture.QImageViewer(f'{self.directory}/{self.current_image}', landmarks, self.window().geometry())
         self.win.setWindowModality(Qt.WindowModality.ApplicationModal)
         self.win.show()
-        self.win.closeSignal.connect(self.get_dots)
+        self.win.closeSignal.connect(self.triangulate_landmarks)
     
-    def get_dots(self, dots):
+    def triangulate_landmarks(self, landmarks):
         """Executed when show_picture is closed
-        Triangulate all the possible points and get their positions
+        Triangulate all the possible landmarks and get their positions
 
         Args:
-            dots (_type_): _description_
+            landmarks (_type_): _description_
         """
 
         nbr_img = 0
@@ -1237,76 +1246,76 @@ class Sphere3D(QWidget):
         intrinsics = np.matrix(self.calibration_dict["intrinsics"]["camera matrix"]["matrix"])
         distCoeffs = np.matrix(self.calibration_dict["intrinsics"]["distortion matrix"]["matrix"])
 
-        for dot in dots:
-            index = self.dots.index(dot["id"])
-            self.dots[index].add_dot(self.current_image, dot["dot"])
-            pos = self.estimate_position(self.dots[index])
+        for landmark in landmarks:
+            index = self.landmarks.index(landmark["id"])
+            self.landmarks[index].add_pose(self.current_image, landmark["pose"])
+            pos = self.estimate_position(self.landmarks[index])
             if pos is not None:
-                self.dots[index].set_position(pos)
-            if self.dots[index].get_position() is not None:
-                dot_images = self.dots[index].get_dots()
+                self.landmarks[index].set_position(pos)
+            if self.landmarks[index].get_position() is not None:
+                poses = self.landmarks[index].get_poses()
 
-                for image in dot_images:
+                for image in poses:
                     #Computation of the reprojection error
-                    if dot_images[image] is None:
+                    if poses[image] is None:
                         continue
-                    point = np.matrix([list(self.dots[index].position)])
-                    img_point_1 = np.matrix([dot_images[image].to_array()])
+                    position = np.matrix([list(self.landmarks[index].position)])
+                    pose = np.matrix([poses[image].to_array()])
 
                     extrinsics = np.matrix(self.calibration_dict["extrinsics"][image]["matrix"])
                     extrinsics = extrinsics[0:3, 0:4]
                     
-                    imgpoints2 = reconstruction.project_points(point, intrinsics, extrinsics, distCoeffs).reshape((1,2))
-                    error = cv.norm(img_point_1, imgpoints2, cv.NORM_L2)/len(imgpoints2)
+                    projections = reconstruction.project_points(position, intrinsics, extrinsics, distCoeffs).reshape((1,2))
+                    error = cv.norm(pose, projections, cv.NORM_L2)/len(projections)
                     mean_error += error
                     nbr_img += 1
         if nbr_img != 0:
             print(f"total error: {mean_error/nbr_img}")
         
-        self.update_points()
+        self.update_landmarks()
 
         
     
-    def estimate_position(self, point: reconstruction.Point3D):
-        """Triangulate a point
+    def estimate_position(self, landmark: reconstruction.Landmark):
+        """Triangulate a landmark
 
         Args:
-            point (reconstruction.Point3D): 3d point with all the landmarks
+            landmark (reconstruction.Landmark): 3d landmark with all the poses
 
         Returns:
-            np.ndarray: the 3D position of the point
+            np.ndarray: the 3D position of the landmark
         """
-        dots_no_None = {k:v for (k,v) in point.dots.items() if v is not None}
+        poses_no_None = {k:v for (k,v) in landmark.poses.items() if v is not None}
 
-        if len(dots_no_None) <2 :
+        if len(poses_no_None) <2 :
             # We need at least 2 landmarks to triangulate
             return None
         intrinsics = np.matrix(self.calibration_dict["intrinsics"]["camera matrix"]["matrix"])
         dist_coeffs = np.matrix(self.calibration_dict["intrinsics"]["distortion matrix"]["matrix"])
-        dots = list(dots_no_None.items())
+        poses = list(poses_no_None.items())
         w = int(self.calibration_dict["intrinsics"]["width"])
         h = int(self.calibration_dict["intrinsics"]["height"])
         
         proj_points = []
-        for dot in dots:
+        for pose in poses:
             #  For each landmark, we need to compute the undistorted position on the image
-            image_ext = np.matrix(self.calibration_dict["extrinsics"][dot[0]]["matrix"])
+            image_ext = np.matrix(self.calibration_dict["extrinsics"][pose[0]]["matrix"])
             image_ext = image_ext[0:3, 0:4]
             proj_mat = np.matmul(intrinsics, image_ext)
-            img_point = np.matrix([dot[1].to_array()]).T
+            img_point = np.matrix([pose[1].to_array()]).T
             img_point_undistort = reconstruction.undistort_iter(np.array([img_point]).reshape((1,1,2)), intrinsics, dist_coeffs)
             proj_point = helpers.ProjPoint(proj_mat, img_point_undistort)
             proj_points.append(proj_point)
         
         # Triangulation computation with all the undistorted landmarks
-        points3D = reconstruction.triangulate_point(proj_points)
-        return tuple(points3D)
+        landmark_pos = reconstruction.triangulate_point(proj_points)
+        return tuple(landmark_pos)
 
 class CentroidMessage(QDialog):
-    """Dialog with checkboxes to select points needed for centroid
+    """Dialog with checkboxes to select landmarks needed for centroid
     """
 
-    def __init__(self, dots_with_pos):
+    def __init__(self, landmarks_with_pos : list[reconstruction.Landmark]):
         super(CentroidMessage, self).__init__()
         self.setWindowTitle("MessageBox demo")
 
@@ -1317,14 +1326,14 @@ class CentroidMessage(QDialog):
         v_layout.addWidget(self.check_all_button)
         self.visible = True
 
-        self.checkboxes = list()
-        self.dots = list()
-        for i in dots_with_pos:
+        self.checkboxes = list[QCheckBox]()
+        self.landmarks = list[reconstruction.Landmark]()
+        for i in landmarks_with_pos:
             checkbox = QCheckBox(i.get_label())
             checkbox.setCheckState(Qt.CheckState.Checked)
             checkbox.clicked.connect(self.check_visibility)
             self.checkboxes.append(checkbox)
-            self.dots.append(i)
+            self.landmarks.append(i)
             v_layout.addWidget(checkbox)
         
         Qbtn = QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
@@ -1374,10 +1383,10 @@ class InitWidget(QWidget):
     def __init__(self, parent):
         super(InitWidget, self).__init__(parent)
 
-        self.layout = QVBoxLayout()
+        self.v_layout = QVBoxLayout()
         self.question  = QLabel("Open or create new project")
         self.question.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-        self.layout.addWidget(self.question)
+        self.v_layout.addWidget(self.question)
 
         # choices 
         self.choices = QHBoxLayout()
@@ -1393,15 +1402,15 @@ class InitWidget(QWidget):
         self.choices.addWidget(self.cam_calib)
         self.choices.addWidget(rec)
 
-        self.layout.addLayout(self.choices)
-        self.setLayout(self.layout)
+        self.v_layout.addLayout(self.choices)
+        self.setLayout(self.v_layout)
     
     def open_project(self):
         """Open a project file
         """
         dir_ = QFileInfo(QFileDialog.getOpenFileName(self, "Open project File", ".", "JSON (*.json)")[0])
         self.parent().load_dir(dir_)
-        self.parent().layout.setCurrentIndex(1)
+        self.parent().stacked_layout.setCurrentIndex(1)
 
     
     def create_project(self):
@@ -1460,7 +1469,7 @@ class InitWidget(QWidget):
                 json.dump(self.calib, f_to_write)
             
             self.parent().load_dir(QFileInfo(self.calib_file_name))
-            self.parent().layout.setCurrentIndex(1)
+            self.parent().stacked_layout.setCurrentIndex(1)
 
 
 class ReconstructionWidget(QWidget):
@@ -1480,27 +1489,27 @@ class ReconstructionWidget(QWidget):
         self.viewer = Sphere3D(self.dir_images)
         self.viewer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
-        self.layout = QStackedLayout()
-        self.layout.addWidget(self.init)
-        self.layout.addWidget(self.viewer)
-        self.layout.setContentsMargins(0,0,0,0)
+        self.stacked_layout = QStackedLayout()
+        self.stacked_layout.addWidget(self.init)
+        self.stacked_layout.addWidget(self.viewer)
+        self.stacked_layout.setContentsMargins(0,0,0,0)
         # TODO : limit size of viewer to not crash if too big
         #self.setMaximumSize()
 
-        self.setLayout(self.layout)
+        self.setLayout(self.stacked_layout)
         
         if self.dir_images is None:
-            self.layout.setCurrentIndex(0)
+            self.stacked_layout.setCurrentIndex(0)
         else:
             # Display Sphere
-            self.layout.setCurrentIndex(1)
+            self.stacked_layout.setCurrentIndex(1)
     
     def init_settings(self):
         self.reconstruction_settings = QSettings("Sphaeroptica", "reconstruction")
     
-    def load_dir(self, dir):
+    def load_dir(self, dir : QFileInfo):
         self.viewer.load(dir)
-        self.viewer.update_points()
+        self.viewer.update_landmarks()
         self.reconstruction_settings.setValue("directory", dir.absoluteFilePath())
     
     def keyPressEvent(self, keys_pressed: QKeyEvent) -> None:
