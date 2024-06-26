@@ -36,8 +36,6 @@ from PySide6.QtWidgets import (
 
 import GUI.main as main
 
-print(sys.path)
-
 app = QApplication(sys.argv)
 
 w = main.MainWindow()

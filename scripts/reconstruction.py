@@ -43,9 +43,9 @@ class Landmark():
 
     def __init__(self, id, label, color=QColor('blue'), position = None, poses = None) -> None:
         self.id = id
-        self.label = label
-        self.color = color
-        self.poses = poses if poses is not None else dict()
+        self.label : str = label
+        self.color : QColor = color
+        self.poses : dict[str, helpers.Pose]= poses if poses is not None else dict()
         self.position = position
 
     def get_label(self):
@@ -76,10 +76,10 @@ class Landmark():
         self.poses = dict()
         self.position = None
     
-    def get_image_pose(self, image):
+    def get_image_pose(self, image) -> helpers.Pose:
         return self.poses[image] if image in self.poses else None
     
-    def get_poses(self):
+    def get_poses(self) -> dict[str, helpers.Pose]:
         return self.poses
     
     def to_tuple(self, image, intrinsics, extrinsics, distCoeffs):
@@ -176,7 +176,7 @@ def scale_homogeonous_point(point):
 
     return np.array(point) / point[-1]
 
-def triangulate_point(proj_points):
+def triangulate_point(proj_points : list[helpers.ProjPoint]):
     """Triangulate the set landmarks to a 3D point 
 
     Args:

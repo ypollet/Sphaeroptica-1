@@ -28,6 +28,7 @@
 
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+import traceback
 
 import math
 import glob
@@ -281,10 +282,10 @@ class QLandmarks(QScrollArea):
     def __init__(self, parent):
         super(QLandmarks, self).__init__(parent)
         self.w = QWidget()
-        self.add_pt_btn = QPushButton("Add landmark")
-        self.add_pt_btn.setSizePolicy(QSizePolicy.Policy.Expanding,
+        self.add_landmark_btn = QPushButton("Add landmark")
+        self.add_landmark_btn.setSizePolicy(QSizePolicy.Policy.Expanding,
             QSizePolicy.Policy.Maximum)
-        self.add_pt_btn.clicked.connect(self.add_landmark)
+        self.add_landmark_btn.clicked.connect(self.add_landmark)
 
         self.load_landmarks(self.window().landmarks)
         self.setBackgroundRole(QPalette.ColorRole.BrightText)
@@ -323,7 +324,7 @@ class QLandmarks(QScrollArea):
             self.landmarks_box.addWidget(button)
         
         self.vbox.addLayout(self.landmarks_box)
-        self.vbox.addWidget(self.add_pt_btn)
+        self.vbox.addWidget(self.add_landmark_btn)
         self.w.setLayout(self.vbox)
         self.w.setSizePolicy(QSizePolicy.Policy.Expanding,
             QSizePolicy.Policy.Maximum)
@@ -568,6 +569,9 @@ class CommandsWidget(QWidget):
     landmark_reset = Signal(object)
     label_changed = Signal(object)
     color_changed = Signal(object)
+    change_picture = Signal(object)
+    set_picture = Signal(object)
+    landmarks_to_import = Signal(object)
     export = Signal()
 
     def __init__(self, parent):
@@ -612,8 +616,16 @@ class CommandsWidget(QWidget):
         self.grid_layout.setHorizontalSpacing(30)
 
         self.v_layout.addLayout(self.grid_layout)
+        
+        # import Landmarks
+        self.right_layout = QVBoxLayout()
+        self.right_layout.setAlignment(Qt.AlignmentFlag.AlignRight)
+        self.import_landmark_btn = QPushButton("Import Landmarks")
+        self.import_landmark_btn.clicked.connect(self.import_landmarks)
+        self.right_layout.addWidget(self.import_landmark_btn)
+        self.v_layout.addLayout(self.right_layout)
 
-        # List of Landmarkss
+        # List of Landmarks
         self.landmarks = QLandmarks(self)
         self.landmarks.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.v_layout.addWidget(self.landmarks)
@@ -636,12 +648,34 @@ class CommandsWidget(QWidget):
 
         self.setLayout(self.v_layout)
 
-
+    def import_landmarks(self):
+        landmarks = []
+        max_id = max({i.id for i in self.parent().landmarks}, default=(-1))+1
+        try:
+            landmark_file = QFileInfo(QFileDialog.getOpenFileName(self, "Open landmark File", ".", "JSON (*.json)")[0])
+            landmarks_json = None
+            with open(landmark_file.absoluteFilePath(), "+r") as json_data:
+                landmarks_json = json.load(json_data)["landmarks"]
+                for landmark_label in landmarks_json:
+                    color = QColor(landmarks_json[landmark_label]["color"])
+                    position = tuple(landmarks_json[landmark_label]["position"])
+                    poses = {image:helpers.Pose(pose[0], pose[1]) for image, pose in landmarks_json[landmark_label]["poses"].items()}
+                    landmark = reconstruction.Landmark(id=max_id, label=landmark_label, color=color, position=position, poses=poses)
+                    landmarks.append(landmark)
+                    max_id += 1
+            
+            self.landmarks_to_import.emit(landmarks)
+        except Exception as e:
+            print("Import Landmarks failed")
+            print(traceback.format_exc())
+      
+        
+    
     def left_clicked(self, key : helpers.Keys):
-        self.parent().change_picture(key)
+        self.change_picture.emit(key)
         
     def right_clicked(self, key : helpers.Keys):
-        self.parent().set_picture(key)
+        self.set_picture.emit(key)
 
     def delete_landmark(self, id):
         self.landmark_deleted.emit(id)
@@ -715,6 +749,9 @@ class Sphere3D(QWidget):
         self.commands_widget.label_changed.connect(self.change_label)
         self.commands_widget.color_changed.connect(self.change_color)
         self.commands_widget.landmark_added.connect(self.add_landmark)
+        self.commands_widget.change_picture.connect(self.change_picture)
+        self.commands_widget.set_picture.connect(self.set_picture)
+        self.commands_widget.landmarks_to_import.connect(self.import_landmarks)
         self.commands_widget.export.connect(self.export)
 
         self.commands_widget.setSizePolicy(QSizePolicy.Policy.Maximum,QSizePolicy.Policy.MinimumExpanding)
@@ -739,6 +776,10 @@ class Sphere3D(QWidget):
         self.landmarks = list[reconstruction.Landmark]()
         self.landmarks.append(reconstruction.Landmark(0, 'Point_0', QColor('blue')))
         QColor('blue').value()
+    
+    def import_landmarks(self, landmarks : list[reconstruction.Landmark]):
+        self.landmarks.extend(landmarks)
+        self.update_landmarks()
     
     def load(self, calibration : QFileInfo):
         """load a calibration file into the project
@@ -1139,14 +1180,41 @@ class Sphere3D(QWidget):
         self._old_angles = (self._angles_sphere[0], self._angles_sphere[1])
 
     def export(self):
-        """Export landmarks into a json file
+        """Export landmarks
+        """
+        extensions = {"CSV (*.csv *.txt)": [".csv", ".txt"], "JSON (*.json)" : [".json"] }
+        export_file_name, selected_filter = QFileDialog.getSaveFileName(self, "Save File", self.directory,";;".join(extensions))
+        
+        print(export_file_name)
+        print(selected_filter)
+        add_ext = True
+        for ext in extensions[selected_filter]:
+            if export_file_name.endswith(ext):
+                add_ext = False
+        
+        if add_ext:
+            export_file_name.join(extensions[selected_filter][0])
+        
+        match selected_filter:
+            case "CSV (*.csv *.txt)":
+                self.export_csv(export_file_name)
+            case "JSON (*.json)":
+                self.export_json(export_file_name)
+        
+    
+    def export_json(self, file_name : str):
+        """Export landmark into a json file
         """
 
         json_dict = dict()
+        
         centroid_x = []
         centroid_y = []
         centroid_z = []
         scale_factor = self.commands_widget.distance_calculator.scale_factor
+        
+        json_dict["scale_factor"] = scale_factor
+        json_dict["landmarks"] = dict()
 
         landmarks_with_pos = [landmark for landmark in self.landmarks if landmark.get_position() is not None]
 
@@ -1163,10 +1231,10 @@ class Sphere3D(QWidget):
         for landmark in landmarks_with_pos:
             pos = landmark.get_position()
             
-            json_dict[landmark.get_label()] = { 
+            
+            json_dict["landmarks"][landmark.get_label()] = { 
                 "color": landmark.get_color().name(), 
                 "position": [x for x in pos],
-                "adjusted_position": [x*scale_factor for x in pos],
                 "poses": dict()
             }
             
@@ -1177,20 +1245,57 @@ class Sphere3D(QWidget):
             
             for image, pose in landmark.get_poses().items():
                 if pose is not None:
-                    json_dict[landmark.get_label()]["poses"][image] = pose.to_array()
+                    json_dict["landmarks"][landmark.get_label()]["poses"][image] = pose.to_array()
         if len(centroid_x) > 0:
             center_x, center_y, center_z = sum(centroid_x)/len(centroid_x), sum(centroid_y)/len(centroid_y), sum(centroid_z)/len(centroid_z)
             json_dict["centroid"] = { 
-                "color": landmark.get_color().name(), 
+                "color": "#000000", 
                 "position": [center_x, center_y, center_z],
-                "adjusted_position": [center_x*scale_factor, center_y*scale_factor, center_z*scale_factor],
-                "poses": dict()
             }
         
-        export_file_name = QFileDialog.getSaveFileName(self, "Save File", self.directory+"/.json","JSON (*.json)")[0]
-        if len(export_file_name.strip()) != 0:
-            with open(export_file_name, "+w") as f:
+        if len(file_name.strip()) != 0:
+            with open(file_name, "+w") as f:
                 json.dump(json_dict, f, indent=1)
+    
+    def export_csv(self, file_name : str):
+        """Export points into a csv
+        """
+
+        df = pd.DataFrame(columns=["Color", "X", "Y", "Z", "X_adjusted", "Y_adjusted", "Z_adjusted"])
+        df.rename_axis("Label")
+        centroid_x = []
+        centroid_y = []
+        centroid_z = []
+        scale_factor = self.commands_widget.distance_calculator.scale_factor
+
+        landmarks_with_pos = [landmark for landmark in self.landmarks if landmark.get_position() is not None]
+
+        if len(landmarks_with_pos) == 0:
+            print("Export cancelled")
+            return
+
+        # QDialog to get list of points use to compute the centroid
+        list_landmarks_centroid = self.get_list_landmarks_for_centroid(landmarks_with_pos)
+
+        if list_landmarks_centroid is None:
+            return
+
+        for landmark in landmarks_with_pos:
+            pos = landmark.get_position()
+            
+            df.loc[landmark.get_label()] = [landmark.get_color().name(), pos[0], pos[1], pos[2], pos[0]*scale_factor, pos[1]*scale_factor, pos[2]*scale_factor]
+            if landmark.id in list_landmarks_centroid :
+                centroid_x.append(pos[0])
+                centroid_y.append(pos[1])
+                centroid_z.append(pos[2])
+        if len(centroid_x) > 0:
+            center_x, center_y, center_z = sum(centroid_x)/len(centroid_x), sum(centroid_y)/len(centroid_y), sum(centroid_z)/len(centroid_z)
+            df.loc["centroid"] = ["#000000", center_x, center_y, center_z, center_x*scale_factor, center_y*scale_factor, center_z*scale_factor]
+        
+        
+        if len(file_name.strip()) != 0:
+            df.to_csv(file_name, index=True, index_label="Label", sep="\t")
+    
     
     def get_list_landmarks_for_centroid(self, landmarks_with_pos):
         """Launch Dialog to have the list of landmarks that will count to compute the centroid
@@ -1250,6 +1355,7 @@ class Sphere3D(QWidget):
             index = self.landmarks.index(landmark["id"])
             self.landmarks[index].add_pose(self.current_image, landmark["pose"])
             pos = self.estimate_position(self.landmarks[index])
+            print(pos)
             if pos is not None:
                 self.landmarks[index].set_position(pos)
             if self.landmarks[index].get_position() is not None:
