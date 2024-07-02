@@ -39,6 +39,7 @@ from scripts import helpers
 
 INIT_MARKER_WIDTH = 3
 class QImageLabel(QLabel):
+    show_landmark = Signal(int)
     def __init__(self, parent : QWidget, image : QImage, base_factor : float, landmarks : list, marker_scale : int):
         super(QImageLabel, self).__init__(parent)
         self.landmarks = landmarks
@@ -71,6 +72,8 @@ class QImageLabel(QLabel):
         pos = ev.pos()
         pose = helpers.Pose(float(pos.x()), float(pos.y()))
         self.landmarks[self.window().landmark]["pose"] = pose.scaled(1/self.scaleFactor)
+        self.set_visible_landmark(self.window().landmark, True)
+        self.show_landmark.emit(self.window().landmark)
         self.paint_markers()
 
     def paint_markers(self):
@@ -332,7 +335,7 @@ class QImageViewer(QMainWindow):
             return
     
         self.image_label = QImageLabel(self, image, 0.10, landmarks, INIT_MARKER_WIDTH if self.settings.value("marker_scale") is None else int(self.settings.value("marker_scale")))
-        
+        self.image_label.show_landmark.connect(self.landmark_to_visible)
         self.image_label.setBackgroundRole(QPalette.ColorRole.Dark)
         self.image_label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Ignored)
         self.image_label.setScaledContents(True)
@@ -389,7 +392,10 @@ class QImageViewer(QMainWindow):
 
         self.normalSize()
 
-    
+    def landmark_to_visible(self, val):
+        self.points.buttons[val].visible = True
+        self.points.buttons[val].hide_button.setText("hide")
+        
     def changeScalePoint(self, val):
         self.image_label.set_marker_scale(val)
         self.image_label.paint_markers()

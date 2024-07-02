@@ -1185,8 +1185,6 @@ class Sphere3D(QWidget):
         extensions = {"CSV (*.csv *.txt)": [".csv", ".txt"], "JSON (*.json)" : [".json"] }
         export_file_name, selected_filter = QFileDialog.getSaveFileName(self, "Save File", self.directory,";;".join(extensions))
         
-        print(export_file_name)
-        print(selected_filter)
         add_ext = True
         for ext in extensions[selected_filter]:
             if export_file_name.endswith(ext):
@@ -1355,7 +1353,6 @@ class Sphere3D(QWidget):
             index = self.landmarks.index(landmark["id"])
             self.landmarks[index].add_pose(self.current_image, landmark["pose"])
             pos = self.estimate_position(self.landmarks[index])
-            print(pos)
             if pos is not None:
                 self.landmarks[index].set_position(pos)
             if self.landmarks[index].get_position() is not None:
@@ -1561,9 +1558,7 @@ class InitWidget(QWidget):
             
             while len(queue_img_to_make) != 0:
                 # TODO : Make a progress bar
-                print(len(queue_img_to_make))
                 img = queue_img_to_make.pop()
-                print(img)
                 with Image.open(f'{self.dir}/{img}') as im_basic:
                     im_basic.thumbnail((thumb_w, thumb_h), Image.LANCZOS)
                     im_basic.save(f'{self.dir}/{self.calib["thumbnails"]}/{img}')
