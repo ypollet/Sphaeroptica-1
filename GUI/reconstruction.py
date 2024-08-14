@@ -656,11 +656,13 @@ class CommandsWidget(QWidget):
             landmarks_json = None
             with open(landmark_file.absoluteFilePath(), "+r") as json_data:
                 landmarks_json = json.load(json_data)["landmarks"]
-                for landmark_label in landmarks_json:
-                    color = QColor(landmarks_json[landmark_label]["color"])
-                    position = tuple(landmarks_json[landmark_label]["position"])
-                    poses = {image:helpers.Pose(pose[0], pose[1]) for image, pose in landmarks_json[landmark_label]["poses"].items()}
-                    landmark = reconstruction.Landmark(id=max_id, label=landmark_label, color=color, position=position, poses=poses)
+                for landmark_id in landmarks_json:
+                    print(landmarks_json[landmark_id])
+                    label = landmarks_json[landmark_id]["label"]
+                    color = QColor(landmarks_json[landmark_id]["color"])
+                    position = tuple(landmarks_json[landmark_id]["position"])
+                    poses = {image:helpers.Pose(pose[0], pose[1]) for image, pose in landmarks_json[landmark_id]["poses"].items()}
+                    landmark = reconstruction.Landmark(id=max_id, label=label, color=color, position=position, poses=poses)
                     landmarks.append(landmark)
                     max_id += 1
             
@@ -880,7 +882,9 @@ class Sphere3D(QWidget):
         Args:
             id (int): Id of the landmark to delete
         """
-
+        print(self.landmarks)
+        print(id)
+        print(self.landmarks[1].id)
         self.landmarks.remove(id)
         self.update_landmarks()
     
@@ -1230,7 +1234,8 @@ class Sphere3D(QWidget):
             pos = landmark.get_position()
             
             
-            json_dict["landmarks"][landmark.get_label()] = { 
+            json_dict["landmarks"][landmark.get_id()] = {
+                "label": landmark.get_label(),
                 "color": landmark.get_color().name(), 
                 "position": [x for x in pos],
                 "poses": dict()
@@ -1243,10 +1248,11 @@ class Sphere3D(QWidget):
             
             for image, pose in landmark.get_poses().items():
                 if pose is not None:
-                    json_dict["landmarks"][landmark.get_label()]["poses"][image] = pose.to_array()
+                    json_dict["landmarks"][landmark.get_id()]["poses"][image] = pose.to_array()
         if len(centroid_x) > 0:
             center_x, center_y, center_z = sum(centroid_x)/len(centroid_x), sum(centroid_y)/len(centroid_y), sum(centroid_z)/len(centroid_z)
-            json_dict["centroid"] = { 
+            json_dict["centroid"] = {
+                "label": "centroid",
                 "color": "#000000", 
                 "position": [center_x, center_y, center_z],
             }

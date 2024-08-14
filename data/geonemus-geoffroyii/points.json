@@ -1,7 +1,8 @@
 {
  "scale_factor": 1.0,
  "landmarks": {
-  "cou": {
+  "1": {
+   "label": "cou",
    "color": "#c061cb",
    "position": [
     0.010510555696997843,
@@ -24,7 +25,8 @@
     ]
    }
   },
-  "pec": {
+  "2": {
+   "label": "pec",
    "color": "#0000ff",
    "position": [
     0.00885065117311041,
@@ -47,7 +49,8 @@
     ]
    }
   },
-  "bidou": {
+  "3": {
+   "label": "bidou",
    "color": "#ff7800",
    "position": [
     0.0014585142458516443,
@@ -67,6 +70,7 @@
    }
   },
   "centroid": {
+   "label": "centroid",
    "color": "#000000",
    "position": [
     0.0069399070386533005,
